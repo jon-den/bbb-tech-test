@@ -14,7 +14,7 @@ ML take-home assessment: model Camzyos (mavacamten) adoption using US commercial
 ## Conventions
 - Keep analysis reproducible: `requirements.txt` at root
 - Code should run end-to-end from provided data files
-- Write-up alongside code explaining methodology, assumptions, results, limitations
+- All narrative markdown lives under `docs/` (WRITEUP, FINDINGS, EXPERIMENTS, AGENTIC_AI_PLAN, CANDIDATE_BRIEF, PLAN_TASK1, TODOS, QUESTIONS_FOR_BBB). Only `README.md` and `CLAUDE.md` stay at repo root.
 
 ---
 
@@ -143,7 +143,7 @@ The venv is Python 3.13. To recreate: `python3.13 -m venv .venv && pip install -
 
 ## Findings log
 
-`FINDINGS.md` is a running record of analytical findings that shape methodology, interpretation, or limitations. When you discover something non-obvious — a data quality issue, a structural limitation, a result that changes the analytical approach — **add it to FINDINGS.md immediately** with a finding number (F1, F2, ...), the evidence, and the implication for the analysis or investment thesis. Reference findings by number in notebooks and code comments where relevant.
+`docs/FINDINGS.md` is a running record of analytical findings that shape methodology, interpretation, or limitations. When you discover something non-obvious — a data quality issue, a structural limitation, a result that changes the analytical approach — **add it to docs/FINDINGS.md immediately** with a finding number (F1, F2, ...), the evidence, and the implication for the analysis or investment thesis. Reference findings by number in notebooks and code comments where relevant.
 
 ---
 

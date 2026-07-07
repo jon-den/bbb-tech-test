@@ -353,7 +353,7 @@ def main():
 
     # ── 8. Known limitations ────────────────────────────────────────────────
     print(f"\n{SEP}")
-    print("[8] KNOWN LIMITATIONS (reference FINDINGS.md for full detail)")
+    print("[8] KNOWN LIMITATIONS (reference docs/FINDINGS.md for full detail)")
     print(SEP_THIN)
     limitations = [
         (

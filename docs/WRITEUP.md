@@ -82,7 +82,7 @@ Adding features beyond the refined set consistently degrades calibration while b
 
 ### Patient archetypes and next-adopter profile
 
-`scripts/task1_adoption/07_adoption_answer.py` (output: `outputs/task1_adoption/07_adoption_answer.png`) provides the full Task 1 answer via four panels: monthly adoption curve with bootstrap CIs, cumulative S-curve, archetype hazard comparison, and risk distribution of remaining patients.
+`../scripts/task1_adoption/07_adoption_answer.py` (output: `../outputs/task1_adoption/07_adoption_answer.png`) provides the full Task 1 answer via four panels: monthly adoption curve with bootstrap CIs, cumulative S-curve, archetype hazard comparison, and risk distribution of remaining patients.
 
 **Archetype predicted hazards** (month 12, median 15 months since Disopyramide):
 
@@ -103,7 +103,7 @@ Monthly new starts peaked in late 2022 (~10/month) and decelerated to ~6/month b
 
 ### Calibration
 
-`scripts/task1_adoption/08_calibration.py` (output: `outputs/task1_adoption/08_calibration.png`) documents calibration across three views:
+`../scripts/task1_adoption/08_calibration.py` (output: `../outputs/task1_adoption/08_calibration.png`) documents calibration across three views:
 
 1. **Reliability diagram:** 10 quantile bins, predicted decile vs observed event rate. Hosmer-Lemeshow χ²(8) = 5.7, p = 0.68 — no statistically significant miscalibration. Points track the 45° diagonal within Wilson 95% CIs.
 
@@ -117,7 +117,7 @@ Monthly new starts peaked in late 2022 (~10/month) and decelerated to ~6/month b
 
 ## Task 2: Total Addressable Market
 
-Full Monte Carlo pipeline: [scripts/task2_tam/09_tam_monte_carlo.py](scripts/task2_tam/09_tam_monte_carlo.py) and [src/task2_tam/](src/task2_tam/). Every prior is documented with citation and source type in [outputs/task2_tam/09_tam_sources.csv](outputs/task2_tam/09_tam_sources.csv).
+Full Monte Carlo pipeline: [scripts/task2_tam/09_tam_monte_carlo.py](../scripts/task2_tam/09_tam_monte_carlo.py) and [src/task2_tam/](../src/task2_tam/). Every prior is documented with citation and source type in [outputs/task2_tam/09_tam_sources.csv](../outputs/task2_tam/09_tam_sources.csv).
 
 ### Framing: three definitions of "addressable"
 
@@ -137,7 +137,7 @@ The gap between A and B is the undiagnosed pool. Camzyos' 5–10 year growth is 
 | **Pool B** — diagnosed & treatable today | **~117,000** | 71k – 188k |
 | Undiagnosed gap (A − B) | ~57,000 | (wide) |
 
-![Pool A vs Pool B distributions](outputs/task2_tam/09_tam_pools.png)
+![Pool A vs Pool B distributions](../outputs/task2_tam/09_tam_pools.png)
 
 Pool A aligns with industry framing of ~150–200k symptomatic oHCM patients (BMS investor materials, Cytokinetics competitive positioning) — this concordance across independent sources is the strongest evidence any of these numbers are approximately right.
 
@@ -172,7 +172,7 @@ Where sources genuinely disagree (obstructive fraction is the standout — 37% v
 
 Simple penetration curve: `on_drug(t) = pool_B(t) × peak_penetration × logistic_ramp(t)`, with aficamten diverting new starts (not existing patients) post-PDUFA. Deliberately not a full Bass diffusion — see limitations.
 
-![Prevalent-patient fan chart](outputs/task2_tam/09_tam_fanchart_patients.png)
+![Prevalent-patient fan chart](../outputs/task2_tam/09_tam_fanchart_patients.png)
 
 | Year-end | On-drug (median) | 80% CI | Revenue $M (median) | Revenue 80% CI |
 |---|---:|---:|---:|---:|
@@ -184,7 +184,7 @@ The 2024 backcast: BMS-implied ~10.7k patients (from Q4 2024 US revenue of $201M
 
 ### What moves the number: tornado sensitivity
 
-![Tornado sensitivity](outputs/task2_tam/09_tam_tornado.png)
+![Tornado sensitivity](../outputs/task2_tam/09_tam_tornado.png)
 
 One-at-a-time perturbation of each input from its p05 to p95 (others held at median):
 

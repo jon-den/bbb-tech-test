@@ -75,12 +75,28 @@ tests/
 notebooks/
   01_eda.ipynb             — EDA: cohort identification, Camzyos fill patterns
 
+docs/                      — All narrative markdown (see below)
 synthetic_data/            — Input CSVs (patients, diagnoses, procedures, prescriptions, enrollment)
 ```
 
+## Documentation
+
+All narrative docs live under `docs/`:
+
+| File | Purpose |
+|---|---|
+| [docs/WRITEUP.md](docs/WRITEUP.md) | Full methodology, results, limitations, extensions (Task 1 + Task 2) |
+| [docs/AGENTIC_AI_PLAN.md](docs/AGENTIC_AI_PLAN.md) | Task 3: 10-minute agentic AI investment system pitch |
+| [docs/FINDINGS.md](docs/FINDINGS.md) | Numbered analytical findings (F1–F22) with evidence + implication |
+| [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md) | Chronological log of experiments (E1–E9), including negative results |
+| [docs/CANDIDATE_BRIEF.md](docs/CANDIDATE_BRIEF.md) | Original take-home assessment spec |
+| [docs/PLAN_TASK1.md](docs/PLAN_TASK1.md) | Task 1 implementation plan |
+| [docs/TODOS.md](docs/TODOS.md) | Task tracker |
+| [docs/QUESTIONS_FOR_BBB.md](docs/QUESTIONS_FOR_BBB.md) | Open questions for the interviewer |
+
 ## Key findings
 
-See [FINDINGS.md](FINDINGS.md) for detailed analytical findings (F1–F22) and [EXPERIMENTS.md](EXPERIMENTS.md) for a chronological log of what was tried (including negative results).
+See [FINDINGS.md](docs/FINDINGS.md) for detailed analytical findings (F1–F22) and [EXPERIMENTS.md](docs/EXPERIMENTS.md) for a chronological log of what was tried (including negative results).
 
 **Task 1 short version:**
 - 149 oHCM+Disopyramide patients initiated Camzyos; 620 in the risk set did not
@@ -95,8 +111,8 @@ See [FINDINGS.md](FINDINGS.md) for detailed analytical findings (F1–F22) and [
 
 ## Technical write-up
 
-See [WRITEUP.md](WRITEUP.md) for full methodology, assumptions, results, limitations, and what would change with more time or data (both tasks).
+See [WRITEUP.md](docs/WRITEUP.md) for full methodology, assumptions, results, limitations, and what would change with more time or data (both tasks).
 
 ## Task 3: Agentic AI pitch
 
-See [AGENTIC_AI_PLAN.md](AGENTIC_AI_PLAN.md) for the 10-minute pitch on building an agentic AI investment system.
+See [AGENTIC_AI_PLAN.md](docs/AGENTIC_AI_PLAN.md) for the 10-minute pitch on building an agentic AI investment system.
