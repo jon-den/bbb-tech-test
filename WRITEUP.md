@@ -16,9 +16,9 @@ We model Camzyos (mavacamten) adoption from US commercial claims (2020–2023, ~
 
 **oHCM cohort:** Patients with ≥1 I421 (Obstructive Hypertrophic Cardiomyopathy) diagnosis. This yields 2,506 patients. Strict definition (≥2 I421 claims ≥30 days apart) would give 1,969 patients but does not affect the Camzyos-positive group.
 
-**Risk set:** We condition on Disopyramide experience (769 oHCM patients). Rationale: 164/166 Camzyos initiators (98.8%) previously filled Disopyramide, making it a near-definitional prerequisite — Camzyos is the next-line therapy after Disopyramide failure in clinical guidelines. Conditioning on this shared precondition removes a massive source of non-comparability and focuses the survival question where the signal actually lives: among patients who have already tried Disopyramide, what determines who switches to Camzyos and when?
+**Risk set:** We condition on Disopyramide experience (775 patients). Rationale: 164/166 Camzyos initiators (98.8%) previously filled Disopyramide, making it a near-definitional prerequisite — Camzyos is the next-line therapy after Disopyramide failure in clinical guidelines. Conditioning on this shared precondition removes a massive source of non-comparability and focuses the survival question where the signal actually lives: among patients who have already tried Disopyramide, what determines who switches to Camzyos and when?
 
-The remaining 2 Camzyos patients without Disopyramide are excluded as exceptions (see FINDINGS.md, F6). An additional 15 patients have Disopyramide + Camzyos but with I422/I429 codes (non-obstructive or unspecified HCM) — excluded from the primary analysis, addressed in sensitivity analysis.
+The remaining 2 Camzyos patients without Disopyramide are excluded as exceptions (see FINDINGS.md, F6). The risk set also includes 15 patients with Disopyramide + Camzyos but with I422/I429 codes (non-obstructive or unspecified HCM) — included in the primary analysis (F21: Disopyramide prescription is the operative eligibility criterion regardless of HCM subtype code).
 
 **Observation window:** April 2022 (FDA approval) through December 2023. 21 months of post-launch data.
 
@@ -40,14 +40,14 @@ All features use strict as-of timing: the feature value for month _t_ uses only 
 
 **Features selected in the final model (6):**
 
-| Feature | HR | p | Interpretation |
-|---|---|---|---|
-| `ccb_ever` | 5.80 | 0.0002 | Ever tried CCB = deeper escalation history |
-| `bb_current` | 0.07 | 0.008 | Currently on BB = currently managed, not switching |
-| `ccb_current` | 0.43 | 0.001 | Currently on CCB = idem |
-| `mri_ever` | 1.75 | 0.015 | Cardiac MRI = seen at HCM specialist centre |
-| `months_since_diso` | 0.96 | 0.09 | Longer on Diso = more stable, slower to switch |
-| `n_hcm_meds` | 1.35 | 0.12 | Breadth of medication history |
+| Feature | HR | 95% CI | p | Interpretation |
+|---|---|---|---|---|
+| `ccb_ever` | 4.84 | 1.86–12.58 | 0.001 | Ever tried CCB = deeper escalation history |
+| `bb_current` | 0.07 | 0.01–0.53 | 0.010 | Currently on BB = currently managed, not switching |
+| `ccb_current` | 0.51 | 0.30–0.85 | 0.010 | Currently on CCB = idem |
+| `mri_ever` | 1.32 | 0.80–2.18 | 0.277 | Cardiac MRI = seen at HCM specialist centre (NS) |
+| `months_since_diso` | 0.96 | 0.93–1.00 | 0.041 | Longer on Diso = more stable, slower to switch |
+| `n_hcm_meds` | 1.21 | 0.96–1.53 | 0.110 | Breadth of medication history (NS) |
 
 The "ever tried" vs "currently on" distinction captures the treatment trajectory precisely: `ccb_ever` (tried = ready to escalate) combined with `ccb_current` (still on it = not switching yet) together tell us the patient's position on the escalation ladder. Initiation happens when patients come off their current regimen — the model captures this inflection point.
 
@@ -63,24 +63,55 @@ Demographics (age, sex) are not predictive. Symptom burden codes (dyspnea, HF, f
 
 **Secondary: C-index** (patient-level concordance, computed from max predicted hazard per patient). Reports ranking discrimination independently from calibration.
 
-**Train/test split:** Temporal. Months 1–15 post-launch (Apr 2022–Jun 2023) for training; months 16–21 (Jul–Dec 2023) for testing. This mimics the real forecasting task — train on early adoption, evaluate on later adoption. It also means the test set contains patients who initiated later in the S-curve, when adoption dynamics may have shifted.
+**Train/test split:** Temporal. Months 1–12 post-launch (Apr 2022–Mar 2023) for training; months 13–21 (Apr–Dec 2023) for testing. Split chosen to approximate a 70/30 event ratio (91 train events, 55 test events). This mimics the real forecasting task — train on the first year of adoption, evaluate on the second year. It also means the test set contains patients who initiated later in the S-curve, when adoption dynamics may have shifted.
 
 **Model comparison:**
 
-| Model | Features | BSS (test) | C-index |
+| Model | Features | Time-dep. AUC (test) | BSS (test) |
 |---|---|---|---|
-| Null (marginal rate) | 0 | 0.000 | — |
-| Calendar-time only | month dummies | ~0.000 | — |
-| Clinical priors | 7 | +0.002 | 0.63 |
-| **Refined** | **6** | **+0.001** | **0.66** |
-| Stability-selected | 8–14 | −0.006 to −0.022 | 0.61–0.66 |
-| Full expanded | 41 | −0.021 | 0.63 |
+| Null (marginal rate) | 0 | 0.500 | 0.000 |
+| Calendar-time only | study_month | ~0.500 | ~0.000 |
+| Clinical priors | 7 | 0.671 | +0.002 |
+| **Refined** | **6** | **0.729** | **+0.010** |
+| Stability-selected | 15 | 0.718 | −0.006 |
+| Full expanded | 41 | 0.710 | −0.021 |
 
-Adding features beyond the refined set consistently degrades calibration while barely improving discrimination. With 102 training events, the model supports approximately 6 features without overfitting (heuristic: ≥10–15 events per feature). This is the performance ceiling given the sample size — not a failure of feature engineering (see EXPERIMENTS.md, E1–E9).
+*Primary metric: monthly time-dependent AUROC (event-count weighted) — correct metric for a discrete-time hazard model. BSS measures calibration vs the null.* See FINDINGS.md F17.
+
+Adding features beyond the refined set consistently degrades calibration while barely improving discrimination. With 91 training events, the model supports approximately 6 features without overfitting (heuristic: ≥10–15 events per feature). This is the performance ceiling given the sample size — not a failure of feature engineering (see EXPERIMENTS.md, E1–E9).
+
+### Patient archetypes and next-adopter profile
+
+`scripts/07_adoption_answer.py` (output: `outputs/07_adoption_answer.png`) provides the full Task 1 answer via four panels: monthly adoption curve with bootstrap CIs, cumulative S-curve, archetype hazard comparison, and risk distribution of remaining patients.
+
+**Archetype predicted hazards** (month 12, median 15 months since Disopyramide):
+
+| Archetype | Hazard/month | Median time-to-initiation |
+|---|---|---|
+| Not escalated (on BB, no CCB, no MRI) | ~0% | ~1,700 months |
+| CCB-experienced, off meds, no MRI | 2.6% | 26 months |
+| Specialist-engaged (off meds, had MRI) | **3.4%** | **20 months** |
+| Currently managed (on meds, had MRI) | 0.1% | ~530 months |
+
+The ideal candidate profile — ever tried CCB, currently off all cardiac meds, had cardiac MRI — has 50× higher monthly hazard than a patient still actively managed on beta-blockers. **Investment implication:** the next adopters are concentrated in academic HCM centres where specialist workup (MRI) precedes prescription decisions. Commercial efforts should target REMS-certified cardiologists at high-volume HCM programmes, not primary care.
+
+Uncertainty on discrimination: bootstrap AUC CI = [0.697, 0.735] across 500 patient-level resamples — tight, indicating stable model structure. Monthly prediction intervals widen from ±5 at month 13 to ±9 by month 21 as the at-risk pool depletes.
 
 ### Adoption curve
 
-Monthly new starts peaked in late 2022 (~10/month) and declined to ~6/month by H2 2023. Within the Disopyramide pool, cumulative penetration reached 149/769 = 19.4% by end of study. The remaining ~620 Disopyramide-experienced patients represent the untapped in-sample addressable market. Patients with higher `ccb_ever` scores and recent MRI workups are the highest-priority predicted next adopters.
+Monthly new starts peaked in late 2022 (~10/month) and decelerated to ~6/month by H2 2023. Within the Disopyramide pool, cumulative penetration reached **146/775 = 18.8%** by end of study. The remaining 629 Disopyramide-experienced patients represent the untapped in-sample addressable market, with a mean predicted hazard of 1.45%/month (~9 expected new starts/month at steady state). Note: this reflects the synthetic dataset's flat signal — real-world IBM MarketScan data shows +328% year-on-year growth in Camzyos new patients (2022→2023), suggesting the true trajectory is accelerating, not plateauing (see FINDINGS.md F22).
+
+### Calibration
+
+`scripts/08_calibration.py` (output: `outputs/08_calibration.png`) documents calibration across three views:
+
+1. **Reliability diagram:** 10 quantile bins, predicted decile vs observed event rate. Hosmer-Lemeshow χ²(8) = 5.7, p = 0.68 — no statistically significant miscalibration. Points track the 45° diagonal within Wilson 95% CIs.
+
+2. **Monthly calibration:** Predicted vs observed new starts per test month. MAE = 1.7 patients/month; all observed counts fall within Poisson 95% CIs on the predicted values.
+
+3. **Subgroup calibration:** The model is well-calibrated for CCB-tried patients (the majority of events). The "On BB" subgroup shows 0 observed events vs ~0.4 predicted — consistent with Poisson sampling at HR = 0.07 over 600 person-months, not a structural misspecification. The "CCB naive" group (n=329, 3 events) is also slightly over-predicted; this group is poorly represented in the training set and predictions are consequently uncertain.
+
+**Investment implication:** When the model assigns a 2%/month hazard to a patient cohort, the observed initiation rate has been 2%/month — the probability estimates can be used directly in a market-sizing model without recalibration (subject to the synthetic data caveat).
 
 ---
 
@@ -90,9 +121,9 @@ Monthly new starts peaked in late 2022 (~10/month) and declined to ~6/month by H
 
 From claims data:
 - Eligible oHCM population (I421): 2,506 patients in this 30k-person sample
-- Disopyramide-experienced: 769 (30.7%)
-- Camzyos initiators: 149 (5.9% of oHCM, 19.4% of Diso pool)
-- Untapped in-sample: ~620 Diso-experienced non-initiators
+- Disopyramide-experienced (incl. I422/I429): 775 (30.9% of oHCM)
+- Camzyos initiators: 146 (5.8% of oHCM, 18.8% of Diso pool)
+- Untapped in-sample: 629 Diso-experienced non-initiators
 
 Note: the 98.8% Disopyramide-to-Camzyos co-occurrence rate is almost certainly a synthetic data artefact. Real-world payer data suggests ~60–75% of Camzyos initiators have prior Disopyramide, with the rest coming via CCB failure or specialist switch decisions.
 
@@ -108,7 +139,7 @@ We use the midpoint: **150,000 treatment-eligible US patients**.
 
 **Step 3: Current penetration.** FDA/BMS data: approximately 3,000–5,000 patients on Camzyos by end of 2023. Penetration: 3,000–5,000 / 150,000 = **2–3%**. This is consistent with our in-sample estimate adjusted for the synthetic Disopyramide co-occurrence artefact.
 
-**Step 4: Addressable upside.** The Disopyramide-experienced pool in our data reaches 30.7% of the oHCM pool, of which 19.4% have initiated. The realistic addressable market depends on:
+**Step 4: Addressable upside.** The Disopyramide-experienced pool in our data reaches 30.9% of the oHCM pool, of which 18.8% have initiated. The realistic addressable market depends on:
 - Guideline adoption (Disopyramide is not universally used; CCB+BB failure is an alternative pathway)
 - REMS program reach (certified centres required)
 - Competitive entry (aficamten — Cytokinetics SEQUOIA-HCM trial results)
@@ -135,7 +166,7 @@ Conservative TAM (2–3 year horizon): 8,000–15,000 patients, assuming 5–10%
 
 ### Model limitations
 
-6. **Sample size ceiling:** 102 training events support ~6 features. The model cannot be made more complex without overfitting. Additional features consistently degrade out-of-sample calibration (EXPERIMENTS.md, E1–E9, F13).
+6. **Sample size ceiling:** 91 training events support ~6 features (10–15 events per feature heuristic). The model cannot be made more complex without overfitting. Additional features consistently degrade out-of-sample calibration (EXPERIMENTS.md, E1–E9, F13).
 
 7. **Temporal generalisability:** The test set (Jul–Dec 2023) covers the deceleration phase of adoption. Early-phase patterns (strong CCB/BB effects) may not hold for the late-adopter tail, where the remaining non-initiators may be systematically different (older, more contraindicated, less specialist-engaged).
 

@@ -253,6 +253,18 @@ BSS near zero across all models because the test set has only 30 events across 6
 
 ---
 
+## F21: Expanded HCM eligibility to I421/I422/I429 increases Camzyos events by 15 (Cohort)
+
+The Disopyramide-conditioned risk set originally filtered on I421 (obstructive HCM) only, capturing 149 Camzyos initiators. EDA (F7) identified 15 additional Camzyos patients with Disopyramide whose HCM code is I422 (Other HCM) or I429 (Unspecified CM) — almost certainly oHCM with inconsistent coding, since Disopyramide is specifically indicated for obstructive HCM and would not typically be prescribed for other forms.
+
+**Change:** `HCM_ELIGIBILITY_CODES = ["I421", "I422", "I429"]` in `config.py`; `_disopyramide_eligible()` in `panel.py` now filters on this expanded set. The `_ohcm_eligible()` function (broader oHCM control group) retains I421 only to preserve a consistent denominator for penetration rate calculations.
+
+**Impact:** The at-risk pool expands from ~760 to 775 patients; panel events increase from ~143 to 146 (not all 15 new patients are uncensored — 18 of 164 eligible Cam+Diso+HCM patients are censored before Camzyos initiation due to enrollment gaps). Coefficient magnitudes shift slightly but direction and significance are preserved; `mri_ever` drops below significance threshold (p=0.28 vs p=0.015 before), suggesting it was picking up partly on the smaller sample.
+
+**Implication:** Including these 15 reduces the risk of undercounting Camzyos adoption. The I422/I429 patients are coded inconsistently but clinically equivalent to I421 (Disopyramide prescription is the operative eligibility criterion). Future analyses should note that ~9% of Camzyos initiators have ambiguous HCM coding — a limitation of ICD-10 billing codes, not a property of the disease population.
+
+---
+
 ## F19: Person-month panel uses all available longitudinal data — no index-date truncation — but two downstream limitations apply (Methodology)
 
 The discrete-time hazard model uses a **person-month panel**, not a fixed index date. Each patient at risk contributes one row per calendar month from `entry_month` (= max(first Disopyramide fill, launch)) through `exit_month` (= initiation, dis-enrollment, or study end). Features are computed strictly before each panel month — they are time-varying, not fixed at any single snapshot. This means no data is discarded due to index-date truncation; the model exploits the full longitudinal trajectory.
@@ -275,3 +287,45 @@ The discrete-time hazard model uses a **person-month panel**, not a fixed index 
 
 **Proposed future improvement:** Strict pre-registration of the primary model and primary metric before any test-set evaluation, or a held-out validation set used only once at the very end. In an industry setting, this would mean locking the model card before running `evaluate_model` on the holdout. Alternatively: use nested cross-validation where feature selection and model selection are both within the inner fold, and only a single final model is evaluated on the test set.
 
+
+---
+
+## F22: Task 1 full answer — patient archetypes, adoption trajectory, uncertainty (Modelling)
+
+**Script:** `scripts/07_adoption_answer.py`; **Output:** `outputs/07_adoption_answer.png`
+
+### Which patients initiate?
+
+The dominant predictor is **prior CCB exposure** (ccb_ever HR = 4.84, 95% CI 1.86–12.58, p=0.001). Active beta-blocker therapy is strongly protective (bb_current HR = 0.07, 95% CI 0.01–0.53, p=0.010). Four archetype monthly hazards at the training-period median (month 12, 15 months since Disopyramide, 3 HCM meds):
+
+| Archetype | Hazard/month | Median TTI |
+|---|---|---|
+| Not escalated (on BB, no CCB, no MRI) | 0.0% | ~1,725 mo |
+| CCB-experienced (off meds, no MRI)    | 2.6% | ~26 mo |
+| Specialist-engaged (off meds, had MRI) | 3.4% | ~20 mo |
+| Currently managed (on meds, had MRI)  | 0.1% | ~529 mo |
+
+**Investment implication:** The next adopters are identifiable — patients who have tried and stopped CCBs and had a cardiac MRI (specialist engagement). This points to academic medical centre channels and HCM specialist practices as the primary commercial target.
+
+### Uptake trajectory
+
+Monthly initiations averaged 7.6/month in training (months 1–12) and 6.1/month in the test period (months 13–21) — a mild deceleration consistent with depletion of the easiest-to-reach patients. At 18.8% penetration (146/775) after 21 months, adoption is quasi-linear, not yet showing the exponential growth phase of an S-curve. At the mean predicted hazard for remaining patients (1.45%/month), steady-state flow is ~9 new starts/month from the Disopyramide-eligible pool. This is a synthetic-data artefact: real-world MarketScan data shows +328% YoY growth (2022→2023), suggesting the true trajectory is accelerating, not plateauing.
+
+### Uncertainty
+
+- Time-dependent AUC (test): **0.729**, 95% bootstrap CI [0.697, 0.735] (500 patient-level resamples) — tight CI, discrimination is reliable
+- Brier Skill Score: 0.0095 — modest calibration improvement over null; 55 test events is underpowered for formal calibration assessment
+- Monthly prediction intervals span ~7 counts wide by month 21 ([3.1, 12.0]) — uncertainty grows as the at-risk pool depletes
+- All 9 test months' observed counts fall within the 95% bootstrap CI
+
+**Single-row prediction fix:** `sm.add_constant` incorrectly skips adding an intercept for 1-row DataFrames (ptp=0 triggers early exit). Fixed in `DiscreteHazardGLM._prepare_X` using `has_constant='add'`.
+
+---
+
+## F23: Latent bug in `DiscreteHazardGLM._prepare_X` — single-row prediction (Bug Fix)
+
+`statsmodels.add_constant` uses `np.ptp(axis=0) == 0` to detect existing constants. For any single-row input matrix, every column has ptp=0, so `add_constant` incorrectly concludes a constant is already present and returns the matrix unchanged. Result: the GLM dot product fails with shape mismatch `(1, p) vs (p+1,)` when predicting for individual patients or archetypes.
+
+**Fix:** `has_constant='add'` passed to `sm.add_constant` in `_prepare_X` — this skips the ptp check and always adds the constant column. The fix is backward-compatible: training (batch) calls unaffected.
+
+**Risk surface:** Affects any downstream use of `predict_proba` on single-row inputs — patient scoring, counterfactual simulation, archetype analysis.

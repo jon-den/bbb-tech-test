@@ -20,6 +20,6 @@ convention = "google"
 
 [lint.per-file-ignores]
 "tests/**" = ["D101", "D102", "D103"]  # no docstrings required in test classes/methods
-"scripts/**" = ["D103"]               # runner scripts; main() is an entry point, not a library API
+"scripts/**" = ["D103", "E501"]       # runner scripts: entry points, long print f-strings are intentional
 "notebooks/**" = ["D103", "E501"]     # notebooks are exploratory; long chains are fine
 

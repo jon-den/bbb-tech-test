@@ -60,7 +60,7 @@ class StabilitySelector(BaseEstimator, TransformerMixin):
 
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
-        feature_names = X.columns if hasattr(X, "columns") else [f"f{i}" for i in range(n_features)]
+        feature_names = X.columns
 
         # Tune C if "auto"
         C = self._resolve_C(X_scaled, np.asarray(y), rng)
@@ -72,6 +72,7 @@ class StabilitySelector(BaseEstimator, TransformerMixin):
         else:
             n_sample = int(X.shape[0] * self.sample_fraction)
 
+        n_valid = 0
         for i in range(self.n_bootstrap):
             if patient_ids is not None:
                 sampled_patients = resample(
@@ -103,10 +104,12 @@ class StabilitySelector(BaseEstimator, TransformerMixin):
             )
             model.fit(X_sub, y_sub)
             counts += (model.coef_[0] != 0).astype(int)
+            n_valid += 1
 
-        self.selection_probabilities_ = pd.Series(
-            counts / self.n_bootstrap, index=feature_names
-        ).sort_values(ascending=False)
+        denom = n_valid if n_valid > 0 else self.n_bootstrap
+        self.selection_probabilities_ = pd.Series(counts / denom, index=feature_names).sort_values(
+            ascending=False
+        )
         self.selected_features_ = list(
             self.selection_probabilities_[self.selection_probabilities_ >= self.threshold].index
         )

@@ -14,7 +14,7 @@ from pathlib import Path
 
 # ── 1. Paths ────────────────────────────────────────────────────────────────
 
-DATA_DIR = Path("synthetic_data")
+DATA_DIR = Path(__file__).parent.parent / "synthetic_data"
 
 
 # ── 2. Clinical codes ────────────────────────────────────────────────────────
@@ -25,6 +25,14 @@ DATA_DIR = Path("synthetic_data")
 
 # ICD-10: obstructive hypertrophic cardiomyopathy
 OHCM_CODE = "I421"
+
+# ICD-10 codes included as events in the Disopyramide-conditioned risk set.
+# I422 (Other HCM) and I429 (Unspecified CM) are included alongside I421
+# because 15 Camzyos initiators carry these codes (likely miscoding of oHCM —
+# Disopyramide is specifically indicated for oHCM, so Diso + any HCM code is a
+# strong signal of obstructive pathophysiology). Only I421 is used for the
+# broader control pool (_ohcm_eligible) to preserve a consistent denominator.
+HCM_ELIGIBILITY_CODES = ["I421", "I422", "I429"]
 
 # Drug name as it appears in prescriptions.rx_code
 CAMZYOS_CODE = "Mavacamten"

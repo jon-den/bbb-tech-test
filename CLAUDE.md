@@ -114,6 +114,11 @@ The venv is Python 3.13. To recreate: `python3.13 -m venv .venv && pip install -
 - When a method isn't available in sklearn (e.g., survival analysis via `lifelines` or `sksurv`), implement custom transformers/estimators conforming to the sklearn API (`BaseEstimator`, `TransformerMixin`) so they compose into pipelines.
 - `ColumnTransformer` for heterogeneous feature types. `FunctionTransformer` for simple mappings. No hand-rolled loops that duplicate what sklearn already provides.
 
+### DataFrames as the default for model fitting
+- **Always pass a pandas DataFrame as X** to `DiscreteHazardGLM.fit()` and all other custom estimators. Never convert to numpy before fitting. statsmodels handles DataFrames natively and automatically propagates column names into `result_.params.index`, making `coef_table` fully labelled without any post-hoc name assignment.
+- After `ColumnTransformer.fit_transform()`, always reconstruct a DataFrame: `pd.DataFrame(ct.fit_transform(X), columns=ct.get_feature_names_out(), index=X.index)`. This ensures column names survive through the entire pipeline.
+- The explainability benefit: the IC can read a coefficient table where rows are labelled `features__ccb_ever` not `x3`. Name your columns well upstream and they stay readable all the way to the output.
+
 ### Scripts first, notebooks for presentation only
 - All logic lives in `.py` modules under `src/`. Notebooks are thin wrappers that import, run, and display — no business logic in notebook cells.
 - Each analysis phase is a runnable script (`scripts/01_data_quality.py`, etc.) that can execute end-to-end from the command line.

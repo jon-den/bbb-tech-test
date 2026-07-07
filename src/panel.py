@@ -18,6 +18,7 @@ from src.config import (
     DISOPYRAMIDE_CODE,
     END_MONTH,
     ER_CODES,
+    HCM_ELIGIBILITY_CODES,
     HCM_MEDS,
     HF_CODES_PREFIX,
     INPATIENT_CODES,
@@ -120,7 +121,10 @@ def _build_skeleton(data: RawData, config: PanelConfig) -> pd.DataFrame:
 
 
 def _disopyramide_eligible(data: RawData, launch: pd.Period) -> pd.DataFrame:
-    ohcm = set(data.diagnoses.query("dx_code == @OHCM_CODE")["patient_id"].unique())
+    # HCM_ELIGIBILITY_CODES expands beyond I421 to include I422/I429 (see config).
+    ohcm = set(
+        data.diagnoses[data.diagnoses["dx_code"].isin(HCM_ELIGIBILITY_CODES)]["patient_id"].unique()
+    )
     diso = data.prescriptions.query("rx_code == @DISOPYRAMIDE_CODE")
     first_diso = diso.groupby("patient_id")["date"].min().rename("first_diso_date").reset_index()
     first_diso = first_diso[first_diso["patient_id"].isin(ohcm)]
@@ -212,7 +216,7 @@ def _add_current_med_flag(panel, prescriptions, codes, col_name, lookback_days=9
         rx[["patient_id", "fill_month", "coverage_end_month"]], on="patient_id", how="inner"
     )
     covered = merged[
-        (merged["month"] >= merged["fill_month"])
+        (merged["month"] > merged["fill_month"])  # strict: fill in same month is not yet "current"
         & (merged["month"] <= merged["coverage_end_month"])
     ][["patient_id", "month"]].drop_duplicates()
     covered[col_name] = 1
@@ -342,9 +346,6 @@ def _add_atc_features(panel: pd.DataFrame, data: RawData, w: int) -> pd.DataFram
     else:
         rx["is_sglt2"] = False
     sg_feat = _ever_before_from_df(pm, rx[rx["is_sglt2"]], "date", "sglt2i_ever")
-    # _ever_before_from_df returns only patients in filtered_df; fill 0 for the rest
-    sg_feat = pm.merge(sg_feat, on=["patient_id", "month"], how="left")
-    sg_feat["sglt2i_ever"] = sg_feat["sglt2i_ever"].fillna(0).astype(int)
 
     # Total cardiac drug-days in rolling window
     if "days_supply" in rx_cardiac.columns:
@@ -590,7 +591,7 @@ def _drug_active_with_washout(prescriptions, drug_codes, washout_days, panel, ou
         how="inner",
     )
     covered = merged[
-        (merged["month"] >= merged["fill_month"])
+        (merged["month"] > merged["fill_month"])  # strict: fill in same month is not yet "current"
         & (merged["month"] <= merged["coverage_end_month"])
     ][["patient_id", "month"]].drop_duplicates()
     covered[out_col] = 1
