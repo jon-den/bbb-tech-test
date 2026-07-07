@@ -1,0 +1,285 @@
+#!/usr/bin/env python
+"""Task 1: Camzyos adoption model — discrete-time hazard.
+
+Builds a person-month panel for the Disopyramide-conditioned risk set,
+fits discrete-time hazard GLMs, runs stability selection on the expanded
+feature set, and evaluates against baselines.
+"""
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from sklearn.compose import ColumnTransformer
+
+from src.config import (
+    CLINICAL_FEATURES,
+    EXPANDED_FEATURES,
+    LAUNCH_MONTH,
+    MONTH_COL,
+    REFINED_FEATURES,
+    ModelConfig,
+    PanelConfig,
+    SplitConfig,
+)
+from src.data_loading import load_data
+from src.evaluation import (
+    calibration_plot,
+    count_calibration,
+    count_calibration_plot,
+    evaluate_model,
+)
+from src.models import (
+    DiscreteHazardGLM,
+    GBMHazardBenchmark,
+    MarginalRateModel,
+    cox_discretization_check,
+)
+from src.panel import build_panel
+from src.selection import StabilitySelector, lasso_path_plot
+
+np.random.seed(42)
+
+
+def make_preprocessor(feature_cols):
+    """Continuous time trend + clinical features.
+
+    study_month is included as a continuous passthrough rather than one-hot
+    encoded. Month dummies would all be zero for test months (unseen
+    categories → handle_unknown="ignore" → all zeros), collapsing the
+    baseline hazard to a constant for the entire test window. A single
+    continuous time covariate extrapolates the linear trend correctly.
+    """
+    return ColumnTransformer(
+        transformers=[
+            ("time", "passthrough", [MONTH_COL]),
+            ("features", "passthrough", feature_cols),
+        ],
+        remainder="drop",
+    )
+
+
+def prepare_Xy(train, test, feature_cols):
+    """Fit preprocessor on train, transform both. Returns X_train, X_test, y_train, y_test."""
+    all_cols = feature_cols + [MONTH_COL]
+    prep = make_preprocessor(feature_cols)
+    X_train = prep.fit_transform(train[all_cols])
+    X_test = prep.transform(test[all_cols])
+    names = prep.get_feature_names_out()
+    X_train = pd.DataFrame(X_train, columns=names, index=train.index)
+    X_test = pd.DataFrame(X_test, columns=names, index=test.index)
+    return X_train, X_test, train["event"], test["event"]
+
+
+def main():
+    panel_cfg = PanelConfig()
+    split_cfg = SplitConfig()
+    model_cfg = ModelConfig()
+
+    # ── 1. Load data and build panel ────────────────────────────────
+    print("Loading data...")
+    data = load_data()
+
+    print(f"Building person-month panel (risk_set={panel_cfg.risk_set})...")
+    panel = build_panel(data, panel_cfg)
+
+    print("\nPanel summary:")
+    print(f"  Rows:     {len(panel):,}")
+    print(f"  Patients: {panel['patient_id'].nunique():,}")
+    print(f"  Events:   {panel['event'].sum():,}")
+    print(f"  Months:   {panel['study_month'].min()} – {panel['study_month'].max()}")
+    print(f"  Event rate: {panel['event'].mean():.4f}")
+    skip = {"patient_id", "month", "study_month", "event"}
+    print(f"  Features available: {[c for c in panel.columns if c not in skip]}")
+
+    # ── 2. Temporal train/test split ────────────────────────────────
+    split_month = (
+        pd.Period(split_cfg.train_end_month, freq="M") - pd.Period(LAUNCH_MONTH, freq="M")
+    ).n + 1
+
+    train = panel[panel["study_month"] <= split_month].copy()
+    test = panel[panel["study_month"] > split_month].copy()
+
+    print(f"\nTemporal split at study_month {split_month} ({split_cfg.train_end_month}):")
+    print(
+        f"  Train: {len(train):,} rows, {train['event'].sum():.0f} events, "
+        f"{train['patient_id'].nunique()} patients"
+    )
+    print(
+        f"  Test:  {len(test):,} rows, {test['event'].sum():.0f} events, "
+        f"{test['patient_id'].nunique()} patients"
+    )
+
+    # ── 3. Stability selection on expanded feature set ──────────────
+    expanded_available = [f for f in EXPANDED_FEATURES if f in panel.columns]
+    print(f"\n{'=' * 70}")
+    print(f"STABILITY SELECTION ({len(expanded_available)} candidates, C=auto)")
+    print(f"{'=' * 70}")
+
+    selector = StabilitySelector(
+        n_bootstrap=200,
+        sample_fraction=0.7,
+        threshold=0.6,
+        C="auto",
+        random_state=42,
+    )
+    selector.fit(
+        train[expanded_available],
+        train["event"],
+        patient_ids=train["patient_id"].values,
+    )
+    print(f"  CV-tuned C: {selector.C_used_:.4f}")
+
+    print("\nSelection probabilities:")
+    for feat, prob in selector.selection_probabilities_.items():
+        marker = "  ✓" if prob >= selector.threshold else "   "
+        print(f"  {marker} {feat:30s} {prob:.2f}")
+
+    selected = selector.selected_features_
+    print(f"\nSelected ({len(selected)}): {selected}")
+
+    # ── 4. Prepare feature matrices ─────────────────────────────────
+    clinical_available = [f for f in CLINICAL_FEATURES if f in panel.columns]
+    refined_available = [f for f in REFINED_FEATURES if f in panel.columns]
+
+    datasets = {}
+    for label, feats in [
+        ("clinical", clinical_available),
+        ("refined", refined_available),
+        ("selected", selected if selected else clinical_available),
+        ("expanded", expanded_available),
+    ]:
+        Xtr, Xte, ytr, yte = prepare_Xy(train, test, feats)
+        datasets[label] = (Xtr, Xte, ytr, yte)
+
+    # ── 5. Fit and evaluate models ──────────────────────────────────
+    print(f"\n{'=' * 70}")
+    print("MODEL COMPARISON")
+    print(f"{'=' * 70}")
+    results = []
+    models = {}
+
+    Xtr_c, Xte_c, y_train, y_test = datasets["clinical"]
+
+    # Null
+    m = MarginalRateModel().fit(Xtr_c, y_train)
+    r, _ = evaluate_model(m, Xte_c, y_test, test, "Null (marginal rate)")
+    results.append(r)
+
+    # Linear time trend only
+    time_col = [c for c in Xtr_c.columns if c.startswith("time__")]
+    m = DiscreteHazardGLM(link=model_cfg.link).fit(Xtr_c[time_col], y_train)
+    r, _ = evaluate_model(m, Xte_c[time_col], y_test, test, "Linear time trend only")
+    results.append(r)
+
+    # Clinical priors (7 features)
+    m = DiscreteHazardGLM(link=model_cfg.link).fit(Xtr_c, y_train)
+    r, _ = evaluate_model(m, Xte_c, y_test, test, f"Clinical priors ({len(clinical_available)})")
+    results.append(r)
+    models["clinical"] = m
+
+    # Refined model (6 features: treatment journey + specialist engagement)
+    Xtr_r, Xte_r = datasets["refined"][:2]
+    m = DiscreteHazardGLM(link=model_cfg.link).fit(Xtr_r, y_train)
+    r, _ = evaluate_model(m, Xte_r, y_test, test, f"Refined ({len(refined_available)})")
+    results.append(r)
+    models["refined"] = m
+
+    # Stability-selected
+    if selected and selected != clinical_available:
+        Xtr_s, Xte_s = datasets["selected"][:2]
+        m = DiscreteHazardGLM(link=model_cfg.link).fit(Xtr_s, y_train)
+        r, _ = evaluate_model(m, Xte_s, y_test, test, f"Stability-selected ({len(selected)})")
+        results.append(r)
+        models["selected"] = m
+
+    # Full expanded (expect overfitting)
+    Xtr_e, Xte_e = datasets["expanded"][:2]
+    m = DiscreteHazardGLM(link=model_cfg.link).fit(Xtr_e, y_train)
+    r, _ = evaluate_model(m, Xte_e, y_test, test, f"Full expanded ({len(expanded_available)})")
+    results.append(r)
+    models["expanded"] = m
+
+    # GBM benchmark (nonlinear; interpret AUC only, not coefficients)
+    m = GBMHazardBenchmark().fit(Xtr_r, y_train)
+    r, _ = evaluate_model(
+        m, Xte_r, y_test, test, f"GBM benchmark ({len(refined_available)} features)"
+    )
+    results.append(r)
+    models["gbm"] = m
+
+    results_df = pd.DataFrame(results).set_index("name")
+    display_cols = [
+        "brier_score",
+        "brier_skill_score",
+        "time_dependent_auc",
+        "mean_pred",
+        "mean_observed",
+        "n_events",
+    ]
+    print(results_df[display_cols].round(4).to_string())
+
+    # ── 6. Coefficient tables ───────────────────────────────────────
+    hr_col = "HR" if model_cfg.link == "cloglog" else "OR"
+
+    for label in ["clinical", "refined"]:
+        model = models[label]
+        coef = model.coef_table
+        clinical_coefs = coef.loc[coef.index != "const"]
+        print(f"\n{'=' * 70}")
+        print(f"COEFFICIENTS — {label} ({model_cfg.link})")
+        print(f"{'=' * 70}")
+        print(
+            clinical_coefs[[hr_col, f"{hr_col}_lower", f"{hr_col}_upper", "p"]].round(4).to_string()
+        )
+
+    # ── 7. CoxPH discretization cross-check ────────────────────────
+    print(f"\n{'=' * 70}")
+    print("COX PROPORTIONAL HAZARDS CROSS-CHECK")
+    print("CoxTimeVaryingFitter (continuous time) vs cloglog GLM (discrete time)")
+    print("HRs should agree in sign and be within ~20% if the grouped-Cox")
+    print("approximation holds. Divergences flag feature-specific misspecification.")
+    print(f"{'=' * 70}")
+
+    try:
+        cmp = cox_discretization_check(train, refined_available, models["refined"])
+        print(cmp.round(3).to_string())
+        n_agree = int(cmp["sign_match"].sum())
+        print(f"\nSign agreement: {n_agree}/{len(cmp)} features")
+        max_ratio = cmp["ratio"].abs().max()
+        if max_ratio > 2.0:
+            print(f"WARNING: max HR ratio = {max_ratio:.2f} — poor Cox discretization fit")
+        else:
+            print(f"Max HR ratio = {max_ratio:.2f} — consistent with continuous-time Cox")
+    except Exception as exc:
+        print(f"Cox cross-check failed: {exc}")
+
+    # ── 9. Plots ────────────────────────────────────────────────────
+    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+
+    selector.plot(ax=axes[0, 0])
+    lasso_path_plot(train[expanded_available], y_train, ax=axes[0, 1])
+
+    # Use refined model for calibration plots
+    y_pred = models["refined"].predict_proba(datasets["refined"][1])[:, 1]
+    calibration_plot(y_test.values, y_pred, n_bins=5, ax=axes[1, 0], label="Refined model")
+    axes[1, 0].set_title("Calibration (quintiles, test set)")
+
+    test_pred = test.copy()
+    test_pred["pred"] = y_pred
+    monthly = count_calibration(test_pred)
+    count_calibration_plot(monthly, ax=axes[1, 1])
+    axes[1, 1].set_title("Count-level calibration (test set)")
+
+    plt.tight_layout()
+    plt.savefig("outputs/03_model_evaluation.png", dpi=150, bbox_inches="tight")
+    print("\nPlots saved to outputs/03_model_evaluation.png")
+    plt.show()
+
+
+if __name__ == "__main__":
+    main()
