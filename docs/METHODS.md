@@ -1,12 +1,15 @@
-# Technical Write-Up: Camzyos Adoption Analysis
+# Methods — Camzyos Adoption Analysis (Task 1 + Task 2)
 
-**BB Biotech Investment Case — Task 1 & 2**
+**Audience: quantitative reviewer.** This document defends the modelling choices, characterises their limitations, and gives the analytical narrative behind Task 1 (adoption model) and Task 2 (TAM estimation). Results and headline numbers live in **[RESULTS.md](RESULTS.md)** (IC-facing, slide-structured).
+
+The two tasks share priors: Task 1's in-sample outputs (18.8% Disopyramide→Camzyos conversion; 1.45%/month steady-state hazard for the untapped Diso pool) validate Task 2's `peak_penetration_of_pool_b` prior and `years_to_80pct_peak` calibration. Reading order for a methodological review: Task 1 first (defines cohort + measures conversion velocity), Task 2 second (extrapolates via Monte Carlo over cited priors).
 
 ---
 
-## Executive Summary
+## Executive summary of methodology
 
-We model Camzyos (mavacamten) adoption from US commercial claims (2020–2023, ~30k cardiac patients). The core finding for the investment case: **monthly new patient starts peaked at ~10/month in late 2022 and decelerated to ~6/month by mid-2023**. Total prescription fills continue to grow (7 → 118/month) due to patient persistence, but this is a refill story, not an acceleration-of-adoption story. The distinguishing factor between adopters and non-adopters is not patient severity — it is treatment trajectory and specialist engagement: patients who have already tried CCBs and been seen for cardiac MRIs initiate Camzyos faster. This is a prescriber-driven adoption pattern proxied through treatment history.
+- **Task 1**: Discrete-time hazard GLM (complementary log-log link) on a Disopyramide-conditioned risk set (n=775, 149 events over 21 months). Feature selection via stability selection (Meinshausen-Bühlmann, 200 bootstrap resamples). Final 6-feature refined model chosen because the sample size (91 training events) supports ~6 features per the 10–15 events-per-feature heuristic; larger feature sets consistently degrade out-of-sample calibration (EXPERIMENTS E1–E9).
+- **Task 2**: 10,000-draw Monte Carlo through a two-pool eligibility funnel (Pool A: theoretical ceiling; Pool B: diagnosed treatable today, anchored on Butzner 2021 US claims). Simple logistic penetration curve — deliberately not full Bass — because only ~4 years of launch data support two free shape parameters. Aficamten haircut applied flow-based (diverts new starts; existing Camzyos patients don't switch). Sources triangulated with claims-weighted-highest / imaging-as-upper-anchor / registries-downweighted-for-referral-bias logic; every prior cited in [outputs/task2_tam/09_tam_sources.csv](../outputs/task2_tam/09_tam_sources.csv).
 
 ---
 
@@ -231,7 +234,7 @@ Ranked by expected impact on the estimate:
 7. **Persistence cohort model** using MarketScan longitudinal data (see FINDINGS.md F22). Would replace the flat 5%/year retention with a data-driven survival curve.
 8. **Verify all citations independently.** Two are unverified (Butzner 2026, ODYSSEY-HCM outcome); several were sourced from paywalled Elsevier journals I could not access.
 
-**One-line summary for the IC:** Camzyos' theoretical US ceiling is ~180k patients (80% CI 120–255k); the commercially addressable pool today is ~120k (80% CI 70–190k); base-case US revenue peaks around 2029–2030 at ~$1.6B (80% CI $0.8–3.0B). The single biggest uncertainty is the diagnosed-HCM count, which BB Biotech can improve on the literature using its own real-world data subscription.
+Headline numbers and IC-facing framing: see [RESULTS.md](RESULTS.md).
 
 ---
 

@@ -79,14 +79,27 @@ docs/                      — All narrative markdown (see below)
 synthetic_data/            — Input CSVs (patients, diagnoses, procedures, prescriptions, enrollment)
 ```
 
-## Documentation
+## For reviewers — where to start
 
-All narrative docs live under `docs/`:
+**Recommended reading order:**
+
+1. **[docs/RESULTS.md](docs/RESULTS.md)** — headline numbers, charts, and the IC-facing narrative for all three tasks. Structured as slide-ready sections (Marp-compatible for a future deck).
+2. **[docs/METHODS.md](docs/METHODS.md)** — methodology defence for Task 1 + Task 2 (audience: quantitative reviewer). Documents every modelling choice and its alternative.
+3. **[docs/AGENTIC_AI_PLAN.md](docs/AGENTIC_AI_PLAN.md)** — Task 3 pitch: agentic AI investment system architecture, data connectors, MVP scope, and explicit limitations.
+4. **The code** — run `scripts/task1_adoption/07_adoption_answer.py` (Task 1 headline figure) and `scripts/task2_tam/09_tam_monte_carlo.py` (Task 2 full pipeline) to verify results end-to-end.
+
+**Rendering the results as slides:**
+```bash
+npx @marp-team/marp-cli docs/RESULTS.md -o results.pdf
+```
+
+## All documentation
 
 | File | Purpose |
 |---|---|
-| [docs/WRITEUP.md](docs/WRITEUP.md) | Full methodology, results, limitations, extensions (Task 1 + Task 2) |
-| [docs/AGENTIC_AI_PLAN.md](docs/AGENTIC_AI_PLAN.md) | Task 3: 10-minute agentic AI investment system pitch |
+| [docs/RESULTS.md](docs/RESULTS.md) | Headline results (Task 1 + 2 + 3), slide-structured |
+| [docs/METHODS.md](docs/METHODS.md) | Methodology defence (Task 1 + Task 2 combined) |
+| [docs/AGENTIC_AI_PLAN.md](docs/AGENTIC_AI_PLAN.md) | Task 3: agentic AI investment system pitch |
 | [docs/FINDINGS.md](docs/FINDINGS.md) | Numbered analytical findings (F1–F22) with evidence + implication |
 | [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md) | Chronological log of experiments (E1–E9), including negative results |
 | [docs/CANDIDATE_BRIEF.md](docs/CANDIDATE_BRIEF.md) | Original take-home assessment spec |
@@ -109,10 +122,3 @@ See [FINDINGS.md](docs/FINDINGS.md) for detailed analytical findings (F1–F22) 
 - Base-case US Camzyos revenue peaks 2029–2030 at ~$1.6B median (80% CI $0.8–3.0B)
 - Biggest lever: `diagnosed_hcm_us_current` — where BB Biotech's IQVIA/Symphony/Komodo data would sharpen the estimate most
 
-## Technical write-up
-
-See [WRITEUP.md](docs/WRITEUP.md) for full methodology, assumptions, results, limitations, and what would change with more time or data (both tasks).
-
-## Task 3: Agentic AI pitch
-
-See [AGENTIC_AI_PLAN.md](docs/AGENTIC_AI_PLAN.md) for the 10-minute pitch on building an agentic AI investment system.
