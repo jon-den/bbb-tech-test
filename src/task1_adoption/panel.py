@@ -7,8 +7,8 @@ for rolling counts). Violating this rule introduces look-ahead bias.
 
 import pandas as pd
 
-from src.atc import classify_prescriptions
-from src.config import (
+from src.task1_adoption.atc import classify_prescriptions
+from src.task1_adoption.config import (
     AF_CODES_PREFIX,
     BETA_BLOCKERS,
     CARDIAC_MRI_CODE,
@@ -29,7 +29,7 @@ from src.config import (
     STRAIN_CODE,
     PanelConfig,
 )
-from src.data_loading import RawData
+from src.task1_adoption.data_loading import RawData
 
 
 def _to_period(date_or_str):

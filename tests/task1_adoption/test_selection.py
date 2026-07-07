@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.selection import StabilitySelector
+from src.task1_adoption.selection import StabilitySelector
 
 
 @pytest.fixture

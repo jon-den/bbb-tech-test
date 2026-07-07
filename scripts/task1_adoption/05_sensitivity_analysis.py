@@ -16,13 +16,13 @@ Primary metric is Brier skill score (calibration). C-index is secondary.
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 
-from src.config import (
+from src.task1_adoption.config import (
     CLINICAL_FEATURES,
     LAUNCH_MONTH,
     MONTH_COL,
@@ -30,10 +30,10 @@ from src.config import (
     PanelConfig,
     SplitConfig,
 )
-from src.data_loading import load_data
-from src.evaluation import evaluate_model
-from src.models import DiscreteHazardGLM
-from src.panel import build_panel
+from src.task1_adoption.data_loading import load_data
+from src.task1_adoption.evaluation import evaluate_model
+from src.task1_adoption.models import DiscreteHazardGLM
+from src.task1_adoption.panel import build_panel
 
 np.random.seed(42)
 
@@ -184,7 +184,7 @@ def main():
             delta_auc = row["time_dependent_auc"] - base_auc
             print(f"  {row['label']:55s}  BSS Δ={delta_bss:+.3f}  AUC Δ={delta_auc:+.3f}")
 
-    out_path = Path("outputs/05_sensitivity_analysis.csv")
+    out_path = Path("outputs/task1_adoption/05_sensitivity_analysis.csv")
     out_path.parent.mkdir(exist_ok=True)
     df.to_csv(out_path, index=False)
     print(f"\nResults saved to {out_path}")

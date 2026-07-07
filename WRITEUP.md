@@ -82,7 +82,7 @@ Adding features beyond the refined set consistently degrades calibration while b
 
 ### Patient archetypes and next-adopter profile
 
-`scripts/07_adoption_answer.py` (output: `outputs/07_adoption_answer.png`) provides the full Task 1 answer via four panels: monthly adoption curve with bootstrap CIs, cumulative S-curve, archetype hazard comparison, and risk distribution of remaining patients.
+`scripts/task1_adoption/07_adoption_answer.py` (output: `outputs/task1_adoption/07_adoption_answer.png`) provides the full Task 1 answer via four panels: monthly adoption curve with bootstrap CIs, cumulative S-curve, archetype hazard comparison, and risk distribution of remaining patients.
 
 **Archetype predicted hazards** (month 12, median 15 months since Disopyramide):
 
@@ -103,7 +103,7 @@ Monthly new starts peaked in late 2022 (~10/month) and decelerated to ~6/month b
 
 ### Calibration
 
-`scripts/08_calibration.py` (output: `outputs/08_calibration.png`) documents calibration across three views:
+`scripts/task1_adoption/08_calibration.py` (output: `outputs/task1_adoption/08_calibration.png`) documents calibration across three views:
 
 1. **Reliability diagram:** 10 quantile bins, predicted decile vs observed event rate. Hosmer-Lemeshow χ²(8) = 5.7, p = 0.68 — no statistically significant miscalibration. Points track the 45° diagonal within Wilson 95% CIs.
 
@@ -117,36 +117,121 @@ Monthly new starts peaked in late 2022 (~10/month) and decelerated to ~6/month b
 
 ## Task 2: Total Addressable Market
 
-### In-sample estimate
+Full Monte Carlo pipeline: [scripts/task2_tam/09_tam_monte_carlo.py](scripts/task2_tam/09_tam_monte_carlo.py) and [src/task2_tam/](src/task2_tam/). Every prior is documented with citation and source type in [outputs/task2_tam/09_tam_sources.csv](outputs/task2_tam/09_tam_sources.csv).
 
-From claims data:
-- Eligible oHCM population (I421): 2,506 patients in this 30k-person sample
-- Disopyramide-experienced (incl. I422/I429): 775 (30.9% of oHCM)
-- Camzyos initiators: 146 (5.8% of oHCM, 18.8% of Diso pool)
-- Untapped in-sample: 629 Diso-experienced non-initiators
+### Framing: three definitions of "addressable"
 
-Note: the 98.8% Disopyramide-to-Camzyos co-occurrence rate is almost certainly a synthetic data artefact. Real-world payer data suggests ~60–75% of Camzyos initiators have prior Disopyramide, with the rest coming via CCB failure or specialist switch decisions.
+"Addressable" is ambiguous — and the three sensible definitions differ by roughly an order of magnitude. Reporting a single number without stating which you mean is the most common analytical error in this space. We carry two through the pipeline and comment on the third:
 
-### Extrapolation to US population
+- **Pool A — theoretical ceiling.** Symptomatic obstructive HCM patients (NYHA II–III, LVEF ≥ 50%) in the US population, whether diagnosed or not. The maximum addressable if diagnosis were universal. Computed from population × HCM prevalence × obstructive fraction × symptomatic fraction.
+- **Pool B — diagnosed and treatable today.** Patients already in the healthcare system with an oHCM diagnosis code and NYHA II–III symptoms. The commercially relevant near-term number. Anchored on Butzner et al. 2021 (HIRD claims, 263k point-prevalent HCM in 2019, grown forward).
+- **Intermediate — diagnosable within N years.** Not modelled explicitly; commented on in the trajectory below. This is the number that actually moves as diagnosis rates rise.
 
-**Step 1: oHCM prevalence.** Literature estimates 0.2–0.5% of the general population has HCM (obstructive and non-obstructive combined). Of these, approximately 60–70% are obstructive (LVOT gradient ≥30 mmHg at rest or provocation). US population: ~335M.
+The gap between A and B is the undiagnosed pool. Camzyos' 5–10 year growth is gated by how fast that gap closes, not by underlying epidemiology (which is roughly stable).
 
-oHCM prevalence estimate: 335M × 0.35% × 0.65 ≈ **760,000 patients**
+### Headline numbers (10,000 Monte Carlo draws)
 
-**Step 2: Treatment-eligible population.** Camzyos is indicated for symptomatic oHCM (NYHA Class II–III) despite conventional medical therapy. Industry estimates put the treatment-eligible pool at 100,000–200,000 patients (those symptomatic enough to require therapy escalation). This aligns with Bristol-Myers Squibb's own disclosures.
+| Definition | Median | 80% CI |
+|---|---:|---:|
+| **Pool A** — theoretical ceiling | **~178,000** | 118k – 255k |
+| **Pool B** — diagnosed & treatable today | **~117,000** | 71k – 188k |
+| Undiagnosed gap (A − B) | ~57,000 | (wide) |
 
-We use the midpoint: **150,000 treatment-eligible US patients**.
+![Pool A vs Pool B distributions](outputs/task2_tam/09_tam_pools.png)
 
-**Step 3: Current penetration.** FDA/BMS data: approximately 3,000–5,000 patients on Camzyos by end of 2023. Penetration: 3,000–5,000 / 150,000 = **2–3%**. This is consistent with our in-sample estimate adjusted for the synthetic Disopyramide co-occurrence artefact.
+Pool A aligns with industry framing of ~150–200k symptomatic oHCM patients (BMS investor materials, Cytokinetics competitive positioning) — this concordance across independent sources is the strongest evidence any of these numbers are approximately right.
 
-**Step 4: Addressable upside.** The Disopyramide-experienced pool in our data reaches 30.9% of the oHCM pool, of which 18.8% have initiated. The realistic addressable market depends on:
-- Guideline adoption (Disopyramide is not universally used; CCB+BB failure is an alternative pathway)
-- REMS program reach (certified centres required)
-- Competitive entry (aficamten — Cytokinetics SEQUOIA-HCM trial results)
+Pool B is meaningfully higher than an alternative "point-prevalent claims-only" anchor of ~55–80k (Butzner 2021 base year 2019, applied to only community-coded oHCM at ~37%). The gap reflects two choices: (a) growth forward from 2019 to 2024 at ~9%/year clinical-recognition growth, and (b) an obstructive fraction that spans referral (~66%) and community (~37%) estimates rather than picking one. Both are documented in the priors registry; either can be tightened if BB Biotech has proprietary data.
 
-Conservative TAM (2–3 year horizon): 8,000–15,000 patients, assuming 5–10% penetration into the 150,000-patient eligible pool. At ~$85,000/year list price, this represents $680M–$1.3B annual revenue potential in the US alone.
+### What our synthetic claims dataset contributes
 
-**Uncertainty:** This estimate has wide confidence intervals. The key unknowns are (a) the true eligible population size (100k–200k range), (b) the pace of guideline adoption at non-specialised centres, and (c) competitive displacement by aficamten if approved. We do not model competitive dynamics — this would require prescriber-level panel data not available in claims.
+The ~30k cardiac cohort is one of several imperfect sources — but it's not suitable for absolute TAM (no valid denominator; convenience-sampled cardiac patients, not a general population). What it *does* contribute is three empirical signals the literature doesn't give directly:
+
+1. **Conversion rate among ready-to-escalate patients.** In the Disopyramide-conditioned risk set, 146/775 patients (18.8%) initiated Camzyos over 21 months (Task 1). This is a direct measurement of the "how many of the pool that's actually at the treatment decision point convert" — informing `peak_penetration_of_pool_b`. Caveat: the synthetic 98.8% Diso→Camzyos co-occurrence inflates this by ~25% vs. real-world (F6, F21); adjusted ~14–17% is well within our peak-penetration 90% CI (15–50%).
+2. **Time-to-initiation distribution.** Median 20 months from Disopyramide to Camzyos for the "specialist-engaged" archetype (Task 1), consistent with the `years_to_80pct_peak` prior of 6 years.
+3. **Steady-state hazard velocity.** Task 1's refined model predicts 1.45%/month for the untapped Diso-experienced pool — extrapolating to a US-scale Pool B of ~117k implies ~1,700 new starts/month at steady state, roughly consistent with BMS's observed 2024 acceleration.
+
+What this dataset *cannot* contribute: absolute prevalence, cross-payer generalisability (commercial-only, no Medicare), long-term persistence (only 21 months post-launch), prescriber-level dynamics. These are exactly the gaps the literature anchors and BB Biotech's IQVIA/Symphony subscription would fill.
+
+### How we weight sources when they disagree
+
+Standard triangulation logic: **US claims studies weighted highest** (they directly measure clinically actionable diagnosed disease), **imaging/genetic prevalence as an upper anchor** (measures true phenotype but overstates what's addressable today), **specialty registries downweighted for referral bias** (their patients are more symptomatic and more obstructive than the community average). Applied per prior:
+
+| Prior | Median from | Lower tail from | Upper tail from |
+|---|---|---|---|
+| `hcm_prevalence` | Convergence: Massera 2023 imaging + Butzner 2026 claims-cumulative (independent methods, similar answer) | CARDIA 1995 (0.17%, young adults — lower bound) | Semsarian 2015 with silent HCM upweight |
+| `obstructive_fraction` | Unweighted midpoint of referral (66%) and community claims (37%) — no principled way to pick | Butzner 2026, Charron 2024, Osman 2025 community claims (~37%) | Maron 2006 referral cohort with provocative testing (66%) |
+| `symptomatic_and_ef_preserved_fraction` | US MarketScan (Desai 2022, ~50%) as primary community anchor; specialty-registry 30.7% joint product cross-validates our 0.50 × 0.60 = 0.30 | Community estimates lower end | Charron 2024 / Osman 2025 registries (72–92%, referral-biased) |
+| `diagnosed_hcm_us_current` | Butzner 2021 verified 263k grown at 8.7%/year to 2024 (~400k) | 10th %ile if diagnosis rate flat since 2019 | Butzner 2026 acceleration (unverified DOI) |
+| `peak_penetration_of_pool_b` | External default (30%); cross-checked against in-sample 14–17% adjusted Diso conversion (Task 1) | REMS-constrained bear case | Optimistic specialty-cardiology analogue |
+| `net_price_per_year_usd` | BMS 10-K WAC ~$89k × 15–20% gross-to-net | Aggressive price erosion | Static list-price scenario |
+
+Where sources genuinely disagree (obstructive fraction is the standout — 37% vs 66% is a 2× swing) we widen the CI rather than pick a winner. The IC gets more value from an honest wide band than false precision.
+
+### Forecast: on-drug patients through 2030
+
+Simple penetration curve: `on_drug(t) = pool_B(t) × peak_penetration × logistic_ramp(t)`, with aficamten diverting new starts (not existing patients) post-PDUFA. Deliberately not a full Bass diffusion — see limitations.
+
+![Prevalent-patient fan chart](outputs/task2_tam/09_tam_fanchart_patients.png)
+
+| Year-end | On-drug (median) | 80% CI | Revenue $M (median) | Revenue 80% CI |
+|---|---:|---:|---:|---:|
+| 2025 | ~18,000 | 8k – 35k | $1,216 | $570 – $2,436 |
+| 2028 | ~21,000 | 10k – 40k | $1,565 | $748 – $3,027 |
+| 2030 | ~21,000 | 10k – 39k | $1,585 | $769 – $3,023 |
+
+The 2024 backcast: BMS-implied ~10.7k patients (from Q4 2024 US revenue of $201M ÷ $75k net price) falls within the model 80% CI (p10 6.8k, p50 14.4k, p90 28.4k), though on the lower half. The model is still bullish relative to observed run-rate (~1.3× median) — worth flagging to the IC.
+
+### What moves the number: tornado sensitivity
+
+![Tornado sensitivity](outputs/task2_tam/09_tam_tornado.png)
+
+One-at-a-time perturbation of each input from its p05 to p95 (others held at median):
+
+- **Pool A**: `hcm_prevalence` and `obstructive_fraction` swing the pool by ~110k each — near equal. Symptomatic fraction ~80k swing.
+- **Pool B**: `diagnosed_hcm_us_current` swings ~120k — the single biggest lever anywhere in the pipeline. `obstructive_fraction` ~72k. Symptomatic ~54k.
+
+**What would change our view most:** better claims-based data on (i) the diagnosed HCM count today, and (ii) the true community-coded obstructive fraction. Both are Pool-B levers. Both are exactly what BB Biotech's IQVIA / Symphony / Komodo subscription can improve on the literature.
+
+### Time trajectory — what the fan chart doesn't show
+
+Three dynamic forces determine which end of the CI actually plays out:
+
+1. **Diagnosis-rate tailwind.** Diagnosed HCM more than tripled 2013→2019 in HIRD (Butzner 2021). Butzner 2026 (unverified — DOI paywalled at time of writing) reportedly shows further acceleration. Drug availability itself increases oHCM ascertainment (physicians look harder for provocable gradients when there's a treatment). This shrinks the A−B gap over 5–10 years.
+2. **oHCM coding headwind.** Butzner 2021: incidence of coded oHCM has been *falling* (0.020% → 0.015%) while nHCM incidence rises. Partly reclassification, partly diagnostic drift toward the milder end. Directional risk to Pool B.
+3. **Latent-obstruction reclassification.** Moroni 2023: ~32% of "non-obstructive" patients develop obstruction over 6 years with provocative testing (Murthy 2026 case report). Continuously refills the oHCM pool.
+
+Aficamten (Cytokinetics, SEQUOIA-HCM positive Dec 2023; PDUFA assumed Sept 2025 — verify current status) is the largest single competitive risk. Base case assumes ~50% share of new starts by 18 months post-approval; existing Camzyos patients do not switch en masse.
+
+nHCM label expansion (ODYSSEY-HCM readout) is the largest single upside option. Per the pasted context, Desai 2025 was reportedly negative on the nHCM primary — if confirmed, this option is off the table for Camzyos though not for the class. **Verify with your KOL network** before final IC memo.
+
+### Limitations
+
+I'm not a data scientist — this is a scoped model, not a research-grade artefact. The following are honest limitations, not incidental omissions:
+
+1. **Diffusion is a logistic S-curve, not Bass.** Real diffusion has separate innovation (p) and imitation (q) coefficients that can be fit to observed data. With only ~4 years of launch data and one clean anchor (2024 exit run-rate), fitting p and q separately would be over-parameterised and indefensible. A saturating logistic pinned to `years_to_80pct_peak` is the honest simplification.
+2. **Persistence is a simple 5%/year retention loss**, not cohort-tracked. Real persistence in specialty cardiology is heterogeneous — early discontinuation for tolerability (~10% year 1) then steady-state ~5%/year loss. My flat number captures the average but misses shape.
+3. **Aficamten haircut applies to new starts uniformly.** In reality, share loss depends on prescriber preference, prior authorization dynamics, and clinical differentiation (SEQUOIA-HCM head-to-head data would matter). One national share number is a placeholder.
+4. **US-only.** Ex-US Camzyos revenue is ~10% of worldwide today but ramping. A full BB Biotech view needs EU5 + Japan + China with country-specific reimbursement priors.
+5. **Bullish 2024 backcast.** Model median (~14k) is ~1.3× BMS-implied (~10.7k). Residual gap after Pool-B timing fix (see below) points to `peak_penetration` prior median 30% being on the high side, or the penetration ramp being too steep for a REMS-restricted launch. Observed data sits at model p25, not p50.
+6. **Priors are lognormal / beta by convenience.** The true distributions of these quantities are unknown; parametric families are chosen for computational simplicity, not first-principles fit.
+7. **oHCM fraction prior is intentionally wide (35–65%)** because referral cohorts (~66%) and community claims (~37%) disagree. Better ground truth from BB Biotech's real-world data would collapse this significantly.
+8. **Two unverified citations.** Butzner 2026 JACC:Advances DOI could not be resolved via paywall at time of writing; Cytokinetics ODYSSEY-HCM outcome per pasted context but not independently verified. Both flagged in priors registry.
+
+### What I'd do with more time or better data
+
+Ranked by expected impact on the estimate:
+
+1. **Pull real claims data (BB Biotech's Symphony/IQVIA/Komodo subscription).** Directly measure (a) diagnosed oHCM count 2024, (b) community-coded obstructive fraction, (c) BB-and-CCB-failure conversion rate to Camzyos. These are the three biggest levers and all are directly observable in the subscribed data. Would collapse Pool B uncertainty by ~50%.
+2. **Fit a proper Bass diffusion model** to BMS quarterly revenue with priors on p and q from published specialty-drug launches (Sultan-Farley-Lehmann 1990 meta-analysis). Would let the shape be data-driven rather than logistic-by-assumption.
+3. **Model prescriber-level adoption** using NPI-linked claims. REMS certification status likely dominates all patient-level predictors. Would separate "prescriber access grows" from "eligible patients grow" — different investment implications.
+4. **Explicit ex-US module.** Country-by-country reimbursement priors, launch-year lags, price differentials. Adds ~30–40% to worldwide TAM.
+5. **Formal competitive-share model for aficamten** using SEQUOIA-HCM head-to-head data and BMS-vs-CTKM prescriber-preference surveys. Would replace the single share-of-new-starts prior with a data-driven curve.
+6. **Bass-model the nHCM upside** as a probability-weighted expansion scenario, gated on ODYSSEY-HCM final readout. Currently commentary-only.
+7. **Persistence cohort model** using MarketScan longitudinal data (see FINDINGS.md F22). Would replace the flat 5%/year retention with a data-driven survival curve.
+8. **Verify all citations independently.** Two are unverified (Butzner 2026, ODYSSEY-HCM outcome); several were sourced from paywalled Elsevier journals I could not access.
+
+**One-line summary for the IC:** Camzyos' theoretical US ceiling is ~180k patients (80% CI 120–255k); the commercially addressable pool today is ~120k (80% CI 70–190k); base-case US revenue peaks around 2029–2030 at ~$1.6B (80% CI $0.8–3.0B). The single biggest uncertainty is the diagnosed-HCM count, which BB Biotech can improve on the literature using its own real-world data subscription.
 
 ---
 

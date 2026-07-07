@@ -14,7 +14,7 @@ from pathlib import Path
 
 # ── 1. Paths ────────────────────────────────────────────────────────────────
 
-DATA_DIR = Path(__file__).parent.parent / "synthetic_data"
+DATA_DIR = Path(__file__).resolve().parents[2] / "synthetic_data"
 
 
 # ── 2. Clinical codes ────────────────────────────────────────────────────────

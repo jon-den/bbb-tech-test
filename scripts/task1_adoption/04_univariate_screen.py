@@ -12,17 +12,17 @@ Run on training set only; no test set leakage.
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import numpy as np
 import pandas as pd
 from scipy.stats import fisher_exact, mannwhitneyu
 
-from src.config import (
+from src.task1_adoption.config import (
     CAMZYOS_CODE,
     SplitConfig,
 )
-from src.data_loading import load_data
+from src.task1_adoption.data_loading import load_data
 
 np.random.seed(42)
 
@@ -208,7 +208,7 @@ def main():
         )
 
     # Save full results
-    out_path = Path("outputs/04_univariate_screen.csv")
+    out_path = Path("outputs/task1_adoption/04_univariate_screen.csv")
     out_path.parent.mkdir(exist_ok=True)
     results_df.to_csv(out_path, index=False)
     print(f"\nFull results saved to {out_path}")

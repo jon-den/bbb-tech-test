@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.models import DiscreteHazardGLM, GBMHazardBenchmark, MarginalRateModel
+from src.task1_adoption.models import DiscreteHazardGLM, GBMHazardBenchmark, MarginalRateModel
 
 
 @pytest.fixture

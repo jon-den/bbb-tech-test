@@ -10,14 +10,14 @@ Calibration matters for the investment case: predicted hazard directly feeds the
 expected-new-starts projection used in market sizing. If the model says 2%/month
 for a patient cohort, that should mean ~2% initiate per month.
 
-Output: outputs/08_calibration.png
+Output: outputs/task1_adoption/08_calibration.png
 Run:    .venv/bin/python3.13 scripts/08_calibration.py
 """
 
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
@@ -26,10 +26,16 @@ import pandas as pd
 from scipy import stats
 from sklearn.compose import ColumnTransformer
 
-from src.config import LAUNCH_MONTH, MONTH_COL, REFINED_FEATURES, PanelConfig, SplitConfig
-from src.data_loading import load_data
-from src.models import DiscreteHazardGLM
-from src.panel import build_panel
+from src.task1_adoption.config import (
+    LAUNCH_MONTH,
+    MONTH_COL,
+    REFINED_FEATURES,
+    PanelConfig,
+    SplitConfig,
+)
+from src.task1_adoption.data_loading import load_data
+from src.task1_adoption.models import DiscreteHazardGLM
+from src.task1_adoption.panel import build_panel
 
 np.random.seed(42)
 
@@ -374,7 +380,7 @@ for i, row in all_sub.iterrows():
     )
 
 plt.tight_layout(rect=[0, 0, 1, 0.94])
-out_path = Path("outputs/08_calibration.png")
+out_path = Path("outputs/task1_adoption/08_calibration.png")
 plt.savefig(out_path, dpi=150, bbox_inches="tight", facecolor=SURFACE)
 print(f"\nFigure saved to {out_path}")
 plt.show()

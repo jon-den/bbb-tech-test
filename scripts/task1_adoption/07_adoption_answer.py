@@ -8,14 +8,14 @@ Three-part analysis:
   Uncertainty throughout: bootstrap CIs on AUC and monthly counts (500 iters,
   patient-level resampling).
 
-Output: outputs/07_adoption_answer.png
+Output: outputs/task1_adoption/07_adoption_answer.png
 Run:    .venv/bin/python3.13 scripts/07_adoption_answer.py
 """
 
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
@@ -23,11 +23,17 @@ import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 
-from src.config import LAUNCH_MONTH, MONTH_COL, REFINED_FEATURES, PanelConfig, SplitConfig
-from src.data_loading import load_data
-from src.evaluation import brier_decomposition, time_dependent_auc
-from src.models import DiscreteHazardGLM
-from src.panel import build_panel
+from src.task1_adoption.config import (
+    LAUNCH_MONTH,
+    MONTH_COL,
+    REFINED_FEATURES,
+    PanelConfig,
+    SplitConfig,
+)
+from src.task1_adoption.data_loading import load_data
+from src.task1_adoption.evaluation import brier_decomposition, time_dependent_auc
+from src.task1_adoption.models import DiscreteHazardGLM
+from src.task1_adoption.panel import build_panel
 
 np.random.seed(42)
 
@@ -514,7 +520,7 @@ ax4.text(
 )
 
 plt.tight_layout(rect=[0, 0, 1, 0.96])
-out_path = Path("outputs/07_adoption_answer.png")
+out_path = Path("outputs/task1_adoption/07_adoption_answer.png")
 plt.savefig(out_path, dpi=150, bbox_inches="tight", facecolor=SURFACE)
 print(f"\nFigure saved to {out_path}")
 plt.show()

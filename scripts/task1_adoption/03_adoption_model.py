@@ -9,14 +9,14 @@ feature set, and evaluates against baselines.
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 
-from src.config import (
+from src.task1_adoption.config import (
     CLINICAL_FEATURES,
     EXPANDED_FEATURES,
     LAUNCH_MONTH,
@@ -26,21 +26,21 @@ from src.config import (
     PanelConfig,
     SplitConfig,
 )
-from src.data_loading import load_data
-from src.evaluation import (
+from src.task1_adoption.data_loading import load_data
+from src.task1_adoption.evaluation import (
     calibration_plot,
     count_calibration,
     count_calibration_plot,
     evaluate_model,
 )
-from src.models import (
+from src.task1_adoption.models import (
     DiscreteHazardGLM,
     GBMHazardBenchmark,
     MarginalRateModel,
     cox_discretization_check,
 )
-from src.panel import build_panel
-from src.selection import StabilitySelector, lasso_path_plot
+from src.task1_adoption.panel import build_panel
+from src.task1_adoption.selection import StabilitySelector, lasso_path_plot
 
 np.random.seed(42)
 
@@ -276,8 +276,8 @@ def main():
     axes[1, 1].set_title("Count-level calibration (test set)")
 
     plt.tight_layout()
-    plt.savefig("outputs/03_model_evaluation.png", dpi=150, bbox_inches="tight")
-    print("\nPlots saved to outputs/03_model_evaluation.png")
+    plt.savefig("outputs/task1_adoption/03_model_evaluation.png", dpi=150, bbox_inches="tight")
+    print("\nPlots saved to outputs/task1_adoption/03_model_evaluation.png")
     plt.show()
 
 

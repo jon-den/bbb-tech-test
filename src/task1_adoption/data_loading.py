@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from src.config import DATA_DIR
+from src.task1_adoption.config import DATA_DIR
 
 
 @dataclass

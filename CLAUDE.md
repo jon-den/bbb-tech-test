@@ -120,15 +120,16 @@ The venv is Python 3.13. To recreate: `python3.13 -m venv .venv && pip install -
 - The explainability benefit: the IC can read a coefficient table where rows are labelled `features__ccb_ever` not `x3`. Name your columns well upstream and they stay readable all the way to the output.
 
 ### Scripts first, notebooks for presentation only
-- All logic lives in `.py` modules under `src/`. Notebooks are thin wrappers that import, run, and display — no business logic in notebook cells.
-- Each analysis phase is a runnable script (`scripts/01_data_quality.py`, etc.) that can execute end-to-end from the command line.
+- All logic lives in `.py` modules under `src/task1_adoption/` (Task 1) or `src/task2_tam/` (Task 2). Notebooks are thin wrappers that import, run, and display — no business logic in notebook cells.
+- Each analysis phase is a runnable script under `scripts/task1_adoption/` or `scripts/task2_tam/` (e.g. `scripts/task1_adoption/03_adoption_model.py`) that can execute end-to-end from the command line.
+- Outputs go to `outputs/task1_adoption/` or `outputs/task2_tam/` mirroring the module structure.
 - One lightweight summary notebook per phase that calls the script logic and renders outputs for the IC audience.
 
 ### Reproducibility
 - The repo must be clean and self-contained. A reviewer should be able to `pip install -r requirements.txt` and run every script end-to-end from `synthetic_data/` with zero manual steps.
 - Pin exact dependency versions in `requirements.txt`.
 - Set random seeds explicitly wherever randomness is involved (`random_state=` params, numpy/scipy seeds).
-- Keep the repo structure tidy: `src/` for reusable modules, `scripts/` for runnable analyses, `notebooks/` for presentation, `synthetic_data/` for inputs. No orphan files in root.
+- Keep the repo structure tidy: `src/task{1,2}_*/` for reusable modules, `scripts/task{1,2}_*/` for runnable analyses, `outputs/task{1,2}_*/` for figures/CSVs, `notebooks/` for presentation, `synthetic_data/` for inputs. No orphan files in root.
 
 ### Documentation
 - **Docstrings**: use [Google style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings).

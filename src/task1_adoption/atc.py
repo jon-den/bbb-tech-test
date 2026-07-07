@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 
-OMOP_DIR = Path(__file__).parent.parent / "data" / "omop"
+OMOP_DIR = Path(__file__).resolve().parents[2] / "data" / "omop"
 
 # ATC 2nd-level therapeutic classes relevant to cardiac patients
 CARDIAC_ATC_CLASSES = {

@@ -17,14 +17,14 @@ Run from the repo root:
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import numpy as np
 import pandas as pd
 from scipy.stats import mannwhitneyu
 from sklearn.compose import ColumnTransformer
 
-from src.config import (
+from src.task1_adoption.config import (
     HCM_ELIGIBILITY_CODES,
     LAUNCH_MONTH,
     MONTH_COL,
@@ -33,18 +33,18 @@ from src.config import (
     PanelConfig,
     SplitConfig,
 )
-from src.data_loading import load_data
-from src.evaluation import (
+from src.task1_adoption.data_loading import load_data
+from src.task1_adoption.evaluation import (
     brier_decomposition,
     count_calibration,
     time_dependent_auc,
 )
-from src.models import (
+from src.task1_adoption.models import (
     DiscreteHazardGLM,
     MarginalRateModel,
     cox_discretization_check,
 )
-from src.panel import build_panel
+from src.task1_adoption.panel import build_panel
 
 np.random.seed(42)
 
