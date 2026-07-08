@@ -3,7 +3,7 @@
 Analysis of Camzyos (mavacamten) adoption in US commercial claims data (~30k cardiac patients, 2020–2023). Three tasks:
 
 1. **Adoption modelling** — discrete-time hazard model of Camzyos initiation
-2. **TAM estimation** — Monte Carlo estimate of US addressable pool (prior-predictive and posterior-predictive)
+2. **TAM estimation** — PyMC Bayesian model of the US addressable pool (literature priors × claims data)
 3. **Agentic AI pitch** — 10-minute pitch on building an agentic investment system
 
 ## For reviewers — start here
@@ -36,9 +36,9 @@ Task 1 (adoption modelling):
 .venv/bin/python scripts/task1_adoption/10_hr_forest_plot.py       # hazard ratio forest plot
 ```
 
-Task 2 (TAM Monte Carlo):
+Task 2 (TAM PyMC model):
 ```bash
-.venv/bin/python scripts/task2_tam/09_tam_monte_carlo.py
+.venv/bin/python scripts/task2_tam/09_tam_model.py
 ```
 
 Tests:
@@ -46,10 +46,30 @@ Tests:
 .venv/bin/python -m pytest tests/
 ```
 
-Rebuild the case study PDF (pandoc + Chrome headless):
+## Rebuilding the case study PDF
+
+**IMPORTANT — use `scripts/build_pdf.sh` only.** Do not export the PDF from an editor, browser preview, VSCode Markdown preview, or `pandoc` with default settings. Those produce a sans-serif, wide-margin layout that does not match the reviewer-facing format.
+
 ```bash
 scripts/build_pdf.sh
 ```
+
+This runs pandoc (Markdown → HTML with `--citeproc` for [docs/references.bib](docs/references.bib) and `--embed-resources` for images) → Chrome headless (HTML → PDF), with a pinned inline CSS that produces the reviewer-facing layout: **Georgia serif, 820px max-width, 9.5pt body, dense abbreviations block, no page headers/footers**.
+
+Prerequisites:
+- `pandoc ≥ 3.0` — install with `brew install pandoc`
+- Google Chrome at the default macOS install path (`/Applications/Google Chrome.app`)
+
+Output: `docs/CASE_STUDY.pdf` (~800–900 KB).
+
+If the output is smaller (~500 KB), sans-serif, or has very wide margins, the script was not used — regenerate via `scripts/build_pdf.sh`.
+
+Two CSS quirks that are load-bearing (see comments in [scripts/build_pdf.sh](scripts/build_pdf.sh)):
+
+1. The tempfile suffix **must** be `.html` — Chrome refuses to parse `<style>` in files with unknown extensions and renders the CSS as body text.
+2. The CSS is a **single line** in the `header-includes` variable — pandoc's insertion into `<head>` breaks with multi-line content and the `<style>` block leaks into page 1.
+
+Edit the CSS in [scripts/build_pdf.sh](scripts/build_pdf.sh) if the format needs to change; don't add a separate stylesheet.
 
 ## Project structure
 
@@ -64,18 +84,12 @@ src/
     selection.py           — StabilitySelector (bootstrap + L1)
     atc.py                 — OMOP ATC drug classification
   task2_tam/               — Task 2 modules
-    priors.py              — Registry of every prior with citation + source_type
-    funnel.py              — Two-pool eligibility funnel (Pool A theoretical / Pool B diagnosed)
-    diffusion.py           — Logistic penetration curve (used in fan-chart script only)
-    revenue.py             — Patients → USD net revenue (fan-chart script only)
-    simulation.py          — Monte Carlo orchestrator
-    sensitivity.py         — One-at-a-time tornado
+    tam_model.py           — PyMC joint Bayesian model (p_true × s_capture × N_hcm)
     claims_evidence.py     — Beta-Binomial evidence definitions on the ~30k cohort
-    bayesian_update.py     — Beta-Binomial conjugate update for the eligible fraction
 
 scripts/
   task1_adoption/          — Numbered Task 1 pipeline scripts (03–10)
-  task2_tam/               — Task 2 pipeline (09)
+  task2_tam/               — Task 2 pipeline (09_tam_model.py)
   build_pdf.sh             — Build docs/CASE_STUDY.pdf (pandoc + Chrome headless)
 
 outputs/
@@ -100,10 +114,7 @@ references/                — External PDFs referenced in the write-up (e.g., C
 | File | Purpose |
 |---|---|
 | [docs/CASE_STUDY.md](docs/CASE_STUDY.md) / [.pdf](docs/CASE_STUDY.pdf) | Primary deliverable (Task 1 + Task 2) |
-| [docs/RESULTS.md](docs/RESULTS.md) | Slide-structured summary (all three tasks) |
-| [docs/METHODS.md](docs/METHODS.md) | Methodology defence for the quant reviewer |
 | [docs/AGENTIC_AI_PLAN.md](docs/AGENTIC_AI_PLAN.md) | Task 3 pitch |
-| [docs/FINDINGS.md](docs/FINDINGS.md) | Numbered analytical findings (F1–…) |
 | [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md) | Chronological experiment log |
 | [docs/CANDIDATE_BRIEF.md](docs/CANDIDATE_BRIEF.md) | Original take-home assessment spec |
 | [docs/QUESTIONS_FOR_BBB.md](docs/QUESTIONS_FOR_BBB.md) | Open questions for the interviewer |
@@ -113,10 +124,10 @@ references/                — External PDFs referenced in the write-up (e.g., C
 
 **Task 1 — adoption model.** 6-feature discrete-time hazard GLM on 775 Disopyramide-experienced patients (146 initiators). Test-set time-dependent AUC 0.72 (95% CI [0.67, 0.78] from patient-level test bootstrap), count calibration MAE 1.7 patients/month. Treatment-escalation history (`ccb_ever` HR 4.69, p<0.01) dominates; demographics and symptom-burden codes not predictive. See [CASE_STUDY.md § Task 1](docs/CASE_STUDY.md).
 
-**Task 2 — TAM.**
-- **Pool A (theoretical ceiling)** — prior-predictive median ~182k, 80% CI 123–258k
-- **Pool B (diagnosed treatable today)** — prior-predictive median ~120k, 80% CI 74–192k
-- **Posterior-predictive Pool B** — ~17k (11–24k) after Bayesian update on the 30k claims cohort — the ~7× gap between prior and posterior quantifies the value of a real claims subscription
-- Top sensitivity lever: diagnosed HCM count (swings Pool B by ~123k)
+**Task 2 — TAM.** Joint PyMC Bayesian model reconciles literature (~30% of diagnosed HCM adults are Camzyos-eligible, Desai 2022) with the claims cohort (~4% look treatable using the Task 1 escalation markers) via a claims-capture-rate parameter.
+- **US addressable market** — posterior mean **~120,000 patients**, 80% CI **74k–192k**
+- **True clinical eligibility `p`** — 30.4% (22–39%)
+- **Claims capture rate `s`** — 14.0% (10–18%) — i.e., our billing data sees roughly 1 in 7 truly eligible patients; this is the direct Task 3 hand-off
+- Top sensitivity lever: diagnosed HCM count `N` (halving `N` roughly halves the TAM)
 
 See [CASE_STUDY.md § Task 2](docs/CASE_STUDY.md) and [outputs/task2_tam/](outputs/task2_tam/).
