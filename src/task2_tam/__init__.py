@@ -1,17 +1,10 @@
-"""Total addressable market (TAM) Monte Carlo pipeline for Camzyos.
+"""Task 2 — US total addressable market (TAM) for Camzyos.
 
-Modules
--------
-priors      : Registry of every distribution used in the pipeline, with citations.
-funnel      : Eligibility funnel — Pool A (theoretical) and Pool B (diagnosed today).
-diffusion   : Logistic penetration curve with aficamten share haircut.
-revenue     : Patient count → US net revenue conversion.
-simulation  : Monte Carlo orchestrator (n_draws × time-steps arrays).
-sensitivity : One-at-a-time tornado on each pool.
+Two modules, one question:
 
-Design principle
-----------------
-No magic numbers outside `priors.py`. Every scalar in the pipeline traces to a
-named `Prior` with a source string, so `outputs/task2_tam/09_tam_sources.csv`
-is a complete audit trail for the IC.
+    claims_evidence : extract (k, n) from the claims cohort — Task 1's
+                      I421 ∩ Disopyramide escalation markers.
+    tam_model       : one PyMC model — joint update on true eligibility p,
+                      claims capture rate s, and diagnosed HCM count N;
+                      TAM = N × p.
 """

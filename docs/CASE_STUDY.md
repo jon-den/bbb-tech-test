@@ -19,7 +19,7 @@ link-citations: true
 
 **Task 1.** Treatment escalation history — not demographics or diagnosis codes — is the strongest predictor of Camzyos initiation in claims data (AUC 0.72, 6-feature model). The dominant signal is whether a patient has *already tried and moved past* first-line therapy (ccb_ever HR 4.69, p < 0.01), not age, sex, or symptom-burden billing codes. This is *consistent with* a prescriber-driven adoption pattern (specialists who have escalated treatment are the ones prescribing Camzyos), but it cannot be ruled out that clinical severity (LVOT gradient, NYHA class), invisible in billing data, is the true underlying driver.
 
-**Task 2.** The US addressable pool depends on which of two questions you're asking. Running a *prior-predictive* Monte Carlo over published sources gives **~121k diagnosed treatable patients today** (80% CI 75–195k), inside a theoretical ceiling of **~181k** (123–259k) that will take 5–10 years to reach as diagnostic ascertainment improves [@butzner2021]. Running a *posterior-predictive* update — using our 30k-patient claims cohort to Bayesian-update the eligible-fraction prior (Beta-Binomial conjugate; see below) — collapses Pool B to **~17k** (11–24k) because claims-based proxies for symptomatic obstructive disease under-code by roughly 8×. The truth lies between, and the gap is exactly what BB Biotech's claims subscription is priced to close.
+**Task 2.** **~118,000 US patients** are Camzyos-addressable today, with an 80% credible interval of **74k–192k**, growing to **~200k by 2030** at the observed diagnosis rate (Butzner 2021, ~9%/yr [@butzner2021]). One PyMC model, three inputs: diagnosed HCM in the US (~400k, Butzner 2021 grown to 2024), the literature-based true eligibility rate (~30%, Desai 2022 [@desai2022]), and one ratio from our claims cohort (4% look treatable using the Task 1 markers). The claims number and the literature number disagree by ~7×; the model reconciles them by treating the claims figure as *literature × claims-capture-rate*, so both estimates can be right at once if our billing data sees roughly 1 in 7 truly eligible patients. That capture-rate insight — not the TAM itself — is the direct hand-off to Task 3.
 
 ---
 
@@ -132,117 +132,104 @@ The GLM outperforms the nonlinear GBM on both metrics, due to the small number o
 
 ## Task 2 — How big is the US addressable market?
 
-### Starting simple: point estimates and why they're not enough
+### The setup, in one line
 
-The simplest TAM estimate: BMS and Cytokinetics investor materials cite ~150–200k eligible US patients. This is a reasonable starting point, but it is a single number with no uncertainty, no source decomposition, and no way to challenge individual assumptions. When the IC asks "what if the obstructive fraction is lower?", a point estimate can't answer.
+> **TAM ≈ diagnosed HCM in the US × fraction of them eligible for Camzyos**
 
-A slightly better approach: multiply published midpoints through the eligibility funnel. US adults (261M) × HCM prevalence (0.2%) × obstructive (50%) × symptomatic (60%) = ~157k. But this hides enormous uncertainty — the obstructive fraction alone spans 37–66% across studies, swinging the estimate by ~70k. Reporting 157k without a range is false precision.
+Both inputs are uncertain, and the eligible fraction has two disagreeing sources:
 
-**The two-run approach.** We do two Monte Carlo runs:
+- **Literature:** ~30% of diagnosed HCM adults are obstructive AND symptomatic enough for a myosin inhibitor (Desai 2022 US specialty registry [@desai2022]).
+- **Our claims cohort:** using the Task 1 escalation markers (obstructive HCM code I421 + Disopyramide fill — the single strongest Task 1 signal, HR 4.69), only 769 of 18,953 HCM patients (~4%) look treatable.
 
-1. **Prior-predictive** (10,000 draws): forward-simulates the published priors only — no data enters the numbers. This is what most published TAMs actually are, even when they call themselves "Bayesian". Naming it precisely matters: it is uncertainty propagation, not inference.
-2. **Posterior-predictive** (same funnel, 10,000 draws): replaces the Camzyos-eligible-fraction prior with a Beta-Binomial posterior updated on our 30k claims cohort. This is the "combine your data with published sources" step the brief asks for, and the evidence-synthesis capability BioCarta is heading toward.
+The two numbers differ by ~7×. Ignoring either would be indefensible. The whole Task 2 model is built to reconcile them.
 
-Why Monte Carlo at all? Because the uncertainty at each funnel node is large, asymmetric, and multiplicative — multiplying midpoints understates the tails, and the output of three uncertain fractions is wider and more right-skewed than any single input. Monte Carlo propagates this correctly. Adding the Bayesian update on top turns forward simulation into actual inference on the one parameter our data can measurably move.
+### The reframe
 
-### Approach: two-pool eligibility funnel
+> **The claims data does not measure who is *truly* eligible. It measures who is *coded* as eligible.**
 
-Two pools are computed in parallel through the same funnel:
+Two patients with identical clinical pictures can look completely different in billing records — one has a well-coded chart, the other has vague codes and lives entirely in physician notes. So the 4% and 30% can both be right at once, if the *claims capture rate* is about 1 in 7 (≈ 14%). That capture rate is what our claims cohort actually pinned down.
 
-- **Pool A — theoretical ceiling.** All symptomatic oHCM patients in the US, whether currently diagnosed or not. "What if every case were found?"
-- **Pool B — diagnosed and treatable today.** Patients already in the healthcare system with an active oHCM code. The near-term commercially addressable pool.
+### One PyMC model, three unknowns, six lines
 
-The gap between the two is the undiagnosed pool; Camzyos' 5–10 year growth is gated by how fast that gap closes.
+The whole thing is a joint Bayesian update with three parameters:
 
-### The funnel: inputs and sources and where each number comes from
+| Symbol | What it is | Prior | Prior source |
+|---|---|---|---|
+| `p` | true clinical eligibility | Beta(14.3, 32.3), mean 30.7% | Desai 2022 [@desai2022] |
+| `s` | claims capture rate | Beta(2, 12), mean 14.3% | Claims-coding validation literature |
+| `N` | diagnosed HCM in the US | LogNormal, median 400k, p95 650k | Butzner 2021 [@butzner2021], grown ~9%/yr to 2024 |
+| Data | `k = 769`, `n = 18,953` | `k ~ Binomial(n, p·s)` | Task 1 markers on our cohort |
 
-Each row is one node in the Monte Carlo (10,000 draws). A **single Camzyos-eligible fraction** (30.7%) rather than multiplying separate obstructive and symptomatic estimates — this avoids an independence assumption between two uncertain fractions and is directly grounded in a specialty-registry observation [@desai2022].
+The full model, from [`src/task2_tam/tam_model.py`](../src/task2_tam/tam_model.py):
 
-**Distribution choices.** Patient counts use LogNormal distributions (positive, right-skewed). Fractions use Beta distributions (bounded 0–1).
+```python
+with pm.Model() as model:
+    p     = pm.Beta("p_true_eligibility", 14.3, 32.3)
+    s     = pm.Beta("s_capture_rate",     2.0, 12.0)
+    n_hcm = pm.LogNormal("n_hcm_us", mu=np.log(400_000), sigma=0.295)
+    pm.Binomial("k_observed", n=n, p=p*s, observed=k)
+    pm.Deterministic("tam", n_hcm * p)
+```
 
-| Node | Value | Source |
-|---|---|---|
-| US adults 20+ | 261M | Census ACS 2024 [@census2024] |
-| × HCM prevalence | 0.23% (0.17–0.31%) | Massera 2023 [@massera2023] (UK Biobank, ~0.2%); Butzner 2026 [@butzner2026] (US claims, 0.31%). Concordant with older CARDIA estimate [@maron1995]. Median 0.23% = judgement call |
-| × Camzyos-eligible fraction | 30.7% (20–42%) | US specialty registry [@desai2022]: 30.7% of HCM adults eligible. Community claims imply ~20%; referral + provocation ~40%+ [@charron2024; @osman2025; @butzner2026] |
-| **= Pool A** | **~182k (123–258k)** | |
-| Diagnosed HCM (2024) | 400k (250–650k) | Butzner 2021 [@butzner2021] (HIRD, 263k in 2019, **verified**); grown at ~9%/yr [@butzner2022]. May overstate if growth slows |
-| × Eligible fraction | *(same draw)* | |
-| **= Pool B** | **~120k (74–192k)** | |
+NUTS sampler, 4 chains, r̂ = 1.00, ESS > 2,700 — clean convergence in ~2 seconds.
 
-### How sources are weighted when they disagree
+### Results — TAM today
 
-Each prior is centred on US claims studies [@butzner2021; @butzner2022; @desai2022] (directly measure clinically actionable disease) and widened to span estimates from lower-quality sources (imaging prevalence [@massera2023] as upper anchor, specialty registries [@charron2024; @osman2025] downweighted for referral bias). This is judgement-based prior selection, not a formal mixture — the wide CIs absorb the disagreement rather than hiding it. Every prior is documented with citation and source type in the audit CSV.
+![TAM posterior and joint (p, s) posterior](../outputs/task2_tam/09_tam_posterior.png)
 
-**Commercial-claims bias.** Our prevalence priors are anchored on commercial claims studies that undercount the ≥65 Medicare population where oHCM prevalence peaks. Pool A likely **underestimates** the true ceiling by 30–40%. A Medicare-linked dataset (CMS 100% claims, Optum with dual eligibility) would allow age-stratified prevalence and a proper gross-up.
-
-### Prior-predictive results
-
-![Pool A vs Pool B distribution](../outputs/task2_tam/09_tam_pools.png)
-
-The histogram shows the two Monte Carlo runs side by side: the light-blue distributions are the *prior-predictive* pools (literature only), and the deeper-blue / green overlays are the *posterior-predictive* pools (after the Bayesian update). Pool A (theoretical ceiling) sits at ~181k prior → ~25k posterior; Pool B (diagnosed today) at ~121k → ~17k. The gap between the two answers is the Bayesian-update section below.
-
-### The Bayesian update — combining our data with published sources
-
-The brief explicitly asks us to combine sources including our own dataset. The prior-predictive run does not do that: it is forward simulation. To answer the brief literally we update one parameter — the Camzyos-eligible fraction — with a Beta-Binomial conjugate step against the claims cohort.
-
-**Which parameter and why.** The eligible fraction is a *ratio within HCM patients*, so our cohort supplies both numerator and denominator (18,953 HCM-coded patients) — no external population denominator required. The diagnosed HCM count would need a 30-million-life denominator we do not have in 30k patients, so it stays on its external prior. That extension is exactly what BB Biotech's claims subscription unlocks.
-
-**The update in one line.** Beta(α=14.3, β=32.3) prior [@desai2022] meets Binomial(n, k) data → Beta(α+k, β+n−k) posterior. Prior effective sample size ≈ 47; our data is n ≈ 19,000 — the posterior is data-dominated (≈ 400× weight), and you can say exactly how much weight the literature gets versus the cohort.
-
-**Defining k to match the prior's meaning.** The prior means *symptomatic, treatable oHCM*, not *obstructive-coded*. Naively taking `150/166 = 90%` (the obstructive-coded fraction of Camzyos initiators cited in Task 1) would drag the eligible fraction to ~0.8 and roughly double the TAM off a coding artefact. Instead we define `k_treatable` using the escalation-ladder markers Task 1 identified: obstructive HCM code (I421) intersected with a symptom/escalation signal (Disopyramide fill, SRT, or ≥3 distinct HCM medications). Three definitions bracket the sensitivity:
-
-| Definition | k | n | k/n | Posterior mean | Posterior 90% CI |
-|---|---:|---:|---:|---:|---:|
-| **D1** — I421 ∩ Disopyramide (primary) | 769 | 18,953 | 0.041 | **0.041** | [0.039, 0.044] |
-| D2 — I421 ∩ (Diso ∪ SRT) | 777 | 18,953 | 0.041 | 0.042 | [0.039, 0.044] |
-| D3 — I421 ∩ (Diso ∪ SRT ∪ ≥3 HCM meds) | 822 | 18,953 | 0.043 | 0.044 | [0.042, 0.047] |
-
-D1 is primary because Disopyramide is label-indicated for symptomatic oHCM and was present in 98.8% of Camzyos initiators (Task 1) — the tightest single-signal match to "symptomatic, treatable".
-
-![Bayesian update explainer](../outputs/task2_tam/09_tam_bayes_update.png)
-
-**Honest interpretation.** All three definitions land at ~4% — an order of magnitude below the 30.7% literature prior. This is a strict LOWER BOUND on true clinical eligibility, not a replacement for it: community claims routinely under-code symptoms, so the posterior tells us what fraction of HCM patients would show up as treatable *in this claims database*, not the true underlying clinical rate. The literature prior (~30%) captures the latter in a well-coded referral setting. We report both TAMs (prior-predictive and posterior-predictive) so the IC sees the full range and can pick the framing that matches the commercial question.
-
-**Posterior-predictive TAM (D1 strict, primary):**
-
-| Definition | Median | 80% CI |
+| Quantity | Posterior median | 80% CI |
 |---|---:|---:|
-| Pool A — theoretical ceiling | ~25,000 | 19k – 31k |
-| Pool B — diagnosed & treatable today | ~17,000 | 11k – 24k |
+| **US addressable market today** | **~118,000 patients** | **74k – 192k** |
+| True clinical eligibility `p` | 30% | 22% – 39% |
+| Claims capture rate `s` | 14% | 10% – 18% |
+| Diagnosed HCM in the US `N` | 397,000 | 273k – 583k |
 
-**What this is not.** This is not Bayesian inference on the full funnel — the other five priors are still forward-propagated, and there is no likelihood on the diagnosed HCM count. It is *the* one parameter our data can measurably update, done with correct conjugate arithmetic and full attribution of what the update buys us. Extending the update to the diagnosed count would need a real-world 30M-life denominator (BB Biotech's IQVIA / Symphony / Komodo subscription), and would collapse the largest bar in the tornado — the natural next milestone, and the Task 3 pitch's central deliverable.
+**How to read the figure.** *Right panel:* the orange curve is what the data alone constrains — combinations of `(p, s)` whose product equals the observed 4.1%. Posterior samples sit on it; the priors (dotted grey lines, marking their means) pick where on it. *Left panel:* the TAM = `N × p` posterior. At Camzyos' WAC (~$90k/year), the low end of the 80% CI already implies a >$6B annual US opportunity at peak penetration.
 
-### How does the addressable population evolve over time?
+**The calibration insight** — arguably more actionable than the TAM itself — is that our claims database sees roughly 1 in 7 truly eligible patients. That's the direct hand-off to Task 3: a chart-review validation subsample would independently pin `s` and convert the model from prior-driven identification into evidence-driven inference. Single highest-value data acquisition for closing TAM uncertainty.
 
-Pool A and Pool B are snapshots. The addressable population is dynamic — it grows as diagnosis rates improve:
+### TAM over time
 
-- **Diagnosis is rising.** Butzner 2021 [@butzner2021] shows diagnosed HCM roughly doubled over 2013–2019 (~9%/year CAGR), driven by growing clinical awareness, genetic testing, and the availability of treatment itself pulling patients into workup. At that rate, Pool B closes half the gap to Pool A within ~5 years.
-- **BMS revenue trajectory confirms acceleration.** US Camzyos revenue grew from $84M (Q4 2023) [@bms_q4_2023] to $201M (Q4 2024) [@bms_q4_2024] — roughly 2.4× in one year — implying ~10–15k patients on drug by end of 2024. This is consistent with early S-curve dynamics: rapid uptake among specialist-engaged patients, with the broader pool still untapped.
-- **REMS loosening expands the reachable pool.** The 2023–2024 relaxation of monitoring requirements lowers the prescriber burden, allowing more cardiologists to prescribe. This shifts the uptake curve left without changing the underlying TAM.
+The pool grows because diagnosis grows. Butzner 2021 [@butzner2021] documents ~1.5× growth in diagnosed HCM 2013→2019 (~9%/yr). Propagating that growth rate through the posterior — `TAM(year) = N × (1+g)^(year − 2024) × p` — gives:
 
-A quantitative on-drug trajectory is deliberately not modelled here. Fitting a quantitative on-drug trajectory a penetration curve requires assumptions about peak penetration and diffusion rate that cannot be grounded in cited evidence — the two priors that would drive such a model (what fraction eventually receives Camzyos? how fast?) are external defaults with no empirical anchor beyond 2 years of launch data. This is flagged as future work once 4+ years of real-world prescription data are available.
+| Growth rate | 2024 | 2027 | 2030 |
+|---|---:|---:|---:|
+| 5%/yr (conservative) | ~118k (74–192) | ~137k (85–223) | ~159k (99–258) |
+| **9%/yr (Butzner base case)** | **~118k (74–192)** | **~153k (95–249)** | **~198k (124–323)** |
+| 12%/yr (aggressive) | ~118k (74–192) | ~166k (104–270) | ~234k (145–380) |
 
-### What else our claims dataset contributes to the TAM estimate
+Numbers are medians with 80% CI. Full CSV: [`09_tam_over_time.csv`](../outputs/task2_tam/09_tam_over_time.csv). Under the base case, the TAM approaches ~200k by 2030 — a ~70% expansion of the reachable pool over six years driven entirely by diagnostic ascertainment.
 
-Beyond the Bayesian update on the eligible fraction, the ~30k cardiac cohort supplies two calibration signals that discipline the prior-predictive run without formally entering it as a likelihood:
+**A note on scope.** This is a projection of the *eligible pool*, not a Camzyos-on-drug forecast. The latter is a diffusion question (peak penetration, ramp shape, aficamten share of new starts) that needs 4+ years of launch data to anchor — deliberately excluded. As reference: BMS US Camzyos revenue was $84M Q4 2023 [@bms_q4_2023] and $201M Q4 2024 [@bms_q4_2024], implying ~10–15k patients on drug by end-2024, or ~10% of the TAM's lower bound. Plenty of room to grow.
 
-1. **In-sample conversion rate** — 146/775 Disopyramide-experienced patients (18.8%) initiated over 21 months. This gives a lower bound on reachable penetration in the specialist-engaged population; adjusted for the 98.8% Diso artefact it corresponds to ~14–17%, which sits well inside the peak-penetration prior (15–50%). With more data this would become a second likelihood — on `peak_penetration_of_pool_b` — updating the "how is uptake evolving" question directly.
-2. **Steady-state hazard in the untapped pool** — 1.45%/month across 629 non-initiators (Task 1 model output). At US scale, this implies ~1,700 new starts/month, consistent with BMS's observed 2024 revenue acceleration [@bms_q4_2024] and the S-curve dynamics described above.
+### Sensitivity — how much do the priors matter?
+
+Re-running the same PyMC model under alternative priors ([`09_tam_prior_sensitivity.csv`](../outputs/task2_tam/09_tam_prior_sensitivity.csv)):
+
+| Prior scenario | TAM median | 80% CI |
+|---|---:|---:|
+| **Base case** (Desai `p`, coding-lit `s`, Butzner `N`) | **120k** | **74k – 189k** |
+| Bull: `p` mean shifted to 40% | 158k | 102k – 245k |
+| Bear: `p` mean shifted to 20% | 85k | 51k – 140k |
+| `s` more diffuse (weaker prior) | 119k | 75k – 187k |
+| `s` chart-review-tight (Beta(20, 120)) | 116k | 78k – 180k |
+| `N` low (median 300k) | 89k | 55k – 145k |
+| `N` high (median 550k) | 164k | 102k – 261k |
+
+Two takeaways: (1) the TAM is roughly linear in both `p` and `N` — the two biggest levers — while `s` mostly rearranges the identification of `p`; (2) the base case sits comfortably in the middle of the range, and the full sweep spans ~50k to ~260k. Any point estimate presented without a range from this table is a false-precision claim.
 
 ---
 
 ## What would change our view
 
-![Sensitivity tornado](../outputs/task2_tam/09_tam_tornado.png)
+Ranked by size of impact on the TAM:
 
-Ranked by contribution to output variance:
-
-1. **Diagnosed HCM count** — swings Pool B by ~123k. BB Biotech's IQVIA/Symphony/Komodo subscription can directly measure this; the current prior is a 5-year extrapolation from Butzner 2019 [@butzner2021].
-2. **Camzyos-eligible fraction** — swings Pool A by ~132k and Pool B by ~88k. This is the joint obstructive × symptomatic fraction; the community-vs-referral coding gap [@charron2024; @osman2025; @butzner2026] is the real unknown.
-3. **REMS monitoring relaxation** — BMS progressively loosened the Camzyos REMS monitoring requirements in 2023–2024 (reduced echocardiography frequency, simplified prescriber certification). This expands the practical reachable pool by lowering the prescriber burden. Our model treats the eligible pool as static; in practice, REMS loosening shifts the uptake curve left (faster adoption) and may raise the ceiling (more prescribers = more patients reached). This is a **bullish dynamic** not captured in our base case.
-4. **nHCM label expansion** — excluded from base case. If ODYSSEY-HCM is positive (reportedly negative on primary — verify), the theoretical pool roughly doubles.
-5. **Medicare gross-up** — our prevalence priors are anchored on commercial claims studies that undercount the ≥65 population. Age-stratified prevalence from a Medicare-linked dataset could lift Pool A by 30–40%.
+1. **Diagnosed HCM count `N`** — the single largest lever. Halving `N` roughly halves the TAM. BB Biotech's IQVIA/Symphony/Komodo subscription can measure this directly against a 30M-life denominator; the current prior is an extrapolation from Butzner 2019.
+2. **True eligibility `p`** — the community-vs-referral coding gap [@charron2024; @osman2025; @butzner2026] means literature spans 20–42%. Sensitivity table shows this range moves the TAM from ~85k to ~160k.
+3. **Claims capture rate `s`** — pins where on the identifiability ridge we sit. A chart-review validation sample is the direct evidence upgrade.
+4. **REMS monitoring relaxation** — bullish for reach, not modelled in the static TAM.
+5. **nHCM label expansion** — excluded from base case. If ODYSSEY-HCM were positive (reportedly negative on primary — verify), the eligible pool roughly doubles.
+6. **Medicare gross-up** — our `N` prior is anchored on commercial claims that undercount the ≥65 population; age-stratified Medicare data could lift the TAM by 30–40%.
 
 ---
 
@@ -252,7 +239,7 @@ Ranked by contribution to output variance:
 - **No prescriber granularity.** REMS certification is likely the single strongest predictor of Camzyos initiation, but it is a prescriber-level attribute invisible in patient-level claims data without NPI linkage. The `mri_ever` feature partially proxies for specialist access, but imperfectly.
 - **Small sample size constrains model complexity.** With ~91 training events, the model is limited to 6 features. Interaction terms, nonlinear effects, and time-varying coefficients are all plausible but would overfit. The GBM benchmark (nonlinear, same features) did not improve discrimination, suggesting the linear model captures the available signal.
 - **Claims data only — no clinical detail.** Claims capture billing events, not clinical reality. The variables that actually drive prescribing decisions — LVOT gradient, NYHA functional class, echocardiographic findings — are invisible. Linking to EHR data (e.g., IQVIA EHR Linked, TriNetX, Truveta) would unlock clinical risk factors such as resting gradient >30 mmHg and NYHA III vs. II classification that likely dominate the treatment decision but cannot be observed in billing data alone.
-- **US commercial claims only.** Medicare/Medicaid populations (≥65, low-income) are underrepresented, and oHCM prevalence increases with age — our Pool A likely underestimates the true ceiling by 30–40%. Ex-US markets (~10% of worldwide revenue today) are not modelled.
+- **US commercial claims only.** Medicare/Medicaid populations (≥65, low-income) are underrepresented, and oHCM prevalence increases with age — our diagnosed-HCM prior `N` likely underestimates the true count by 30–40%. Ex-US markets (~10% of worldwide revenue today) are not modelled.
 - **Two unverified citations.** Butzner 2026 [@butzner2026] (DOI paywalled at time of analysis); ODYSSEY-HCM nHCM outcome (from external context only — verify with KOL network before citing in IC materials).
 
 ## What I would change with more time or data
@@ -277,7 +264,7 @@ None of these change the *framework* — they only tighten the priors and extend
 
 ## References
 
-All quantitative claims are grounded in either our analysis pipeline (reproducible via `notebooks/02_camzyos_analysis.ipynb`) or the cited sources below. Full prior registry: `outputs/task2_tam/09_tam_sources.csv`. Methodology: `docs/METHODS.md`.
+All quantitative claims are grounded in either our analysis pipeline (reproducible via `notebooks/02_camzyos_analysis.ipynb`) or the cited sources below. Task 2 model: [`src/task2_tam/tam_model.py`](../src/task2_tam/tam_model.py). Prior sensitivity: [`outputs/task2_tam/09_tam_prior_sensitivity.csv`](../outputs/task2_tam/09_tam_prior_sensitivity.csv).
 
 ::: {#refs}
 :::

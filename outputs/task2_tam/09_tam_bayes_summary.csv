@@ -1,4 +1,0 @@
-definition,k,n,k_over_n,prior_alpha,prior_beta,prior_mean,prior_ess,posterior_alpha,posterior_beta,posterior_mean,posterior_p05,posterior_p95
-D1: I421 ∩ Diso,769,18953,0.0406,14.3,32.279,0.307,46.58,783.3,18216.279,0.0412,0.0389,0.0436
-D2: I421 ∩ (Diso ∪ SRT),777,18953,0.041,14.3,32.279,0.307,46.58,791.3,18208.279,0.0416,0.0393,0.0441
-D3: I421 ∩ (Diso ∪ SRT ∪ ≥3 HCM meds),822,18953,0.0434,14.3,32.279,0.307,46.58,836.3,18163.279,0.044,0.0416,0.0465
