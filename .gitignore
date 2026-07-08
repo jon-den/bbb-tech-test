@@ -1,12 +1,21 @@
-marketscan_exploration/
+# macOS / editor artefacts
 .DS_Store
+__MACOSX/
+
+# Python
 .venv/
 __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
+.ruff_cache/
+
+# Local exploration workspaces (not part of the deliverable)
+marketscan_exploration/
+data/
+
+# Source data — recreated from synthetic_data.zip
 synthetic_data.zip
-__MACOSX/
+
+# Agent workspace
 .claude/
-PLAN_TASK1.md
-QUESTIONS_FOR_BBB
