@@ -147,7 +147,7 @@ The two numbers differ by ~7×. Ignoring either would be indefensible. The whole
 
 > **The claims data does not measure who is *truly* eligible. It measures who is *coded* as eligible.**
 
-Two patients with identical clinical pictures can look completely different in billing records — one has a well-coded chart, the other has vague codes and lives entirely in physician notes. So the 4% and 30% can both be right at once, if the *claims capture rate* is about 1 in 7 (≈ 14%). That capture rate is what our claims cohort actually pinned down.
+Two patients with identical clinical pictures can look completely different in billing records — one has a well-coded chart, the other has vague codes and lives entirely in physician notes. So the 4% and 30% can both be right at once, provided the *claims capture rate* is about 1 in 7 (≈ 14%). Our data is *consistent with* that reconciliation. It doesn't independently measure the capture rate itself — a single ratio can't separate "true eligibility" from "claims capture" — but the model makes the assumption visible and defensible instead of leaving the 7× gap unexplained.
 
 ### One PyMC model, three unknowns, six lines
 
@@ -172,6 +172,8 @@ with pm.Model() as model:
 ```
 
 NUTS sampler, 4 chains, r̂ = 1.00, ESS > 2,700 — clean convergence in ~2 seconds.
+
+**Two things worth naming, because they get asked.** The magnitude of the TAM is set by `N` and `p` together — the LogNormal on diagnosed HCM and the Desai prior on eligibility do most of the numerical work (see sensitivity table: each roughly doubles the TAM across its plausible range). The claims data isn't what makes the TAM big or small; the Bayesian layer is what reconciles the 4% claims figure with the 30% literature figure without discarding either. The value is in the reconciliation, not in the magnitude.
 
 ### Results — TAM today
 
