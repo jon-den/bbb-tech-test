@@ -11,6 +11,7 @@ from src.task1_adoption.atc import classify_prescriptions
 from src.task1_adoption.config import (
     AF_CODES_PREFIX,
     BETA_BLOCKERS,
+    CAMZYOS_CODE,  # noqa: F401 — used via pandas .query("@CAMZYOS_CODE")
     CARDIAC_MRI_CODE,
     CCBS,
     CYP_INHIBITORS,
@@ -24,8 +25,10 @@ from src.task1_adoption.config import (
     INPATIENT_CODES,
     LAUNCH_MONTH,
     MITRAL_CODE,
+    OHCM_CODE,  # noqa: F401 — used via pandas .query("@OHCM_CODE")
     ROLLING_FEATURE_CODES,
     ROLLING_WINDOWS,
+    SRT_CODE,  # noqa: F401 — used via pandas .query("@SRT_CODE")
     STRAIN_CODE,
     PanelConfig,
 )

@@ -74,6 +74,7 @@ tests/
 
 notebooks/
   01_eda.ipynb             — EDA: cohort identification, Camzyos fill patterns
+  02_camzyos_analysis.ipynb — Reproducible technical report (Task 1 + Task 2)
 
 docs/                      — All narrative markdown (see below)
 synthetic_data/            — Input CSVs (patients, diagnoses, procedures, prescriptions, enrollment)
@@ -83,10 +84,10 @@ synthetic_data/            — Input CSVs (patients, diagnoses, procedures, pres
 
 **Recommended reading order:**
 
-1. **[docs/RESULTS.md](docs/RESULTS.md)** — headline numbers, charts, and the IC-facing narrative for all three tasks. Structured as slide-ready sections (Marp-compatible for a future deck).
-2. **[docs/METHODS.md](docs/METHODS.md)** — methodology defence for Task 1 + Task 2 (audience: quantitative reviewer). Documents every modelling choice and its alternative.
-3. **[docs/AGENTIC_AI_PLAN.md](docs/AGENTIC_AI_PLAN.md)** — Task 3 pitch: agentic AI investment system architecture, data connectors, MVP scope, and explicit limitations.
-4. **The code** — run `scripts/task1_adoption/07_adoption_answer.py` (Task 1 headline figure) and `scripts/task2_tam/09_tam_monte_carlo.py` (Task 2 full pipeline) to verify results end-to-end.
+1. **[docs/INVESTMENT_MEMO.md](docs/INVESTMENT_MEMO.md)** — 3-page investment memo. Decision-first: adoption dynamics, TAM range, key drivers, what would change our view.
+2. **[notebooks/02_camzyos_analysis.ipynb](notebooks/02_camzyos_analysis.ipynb)** — reproducible technical write-up. Runs end-to-end from `synthetic_data/`; reads as a narrated document, not just cells.
+3. **[docs/METHODS.md](docs/METHODS.md)** — methodology defence for Task 1 + Task 2. Documents every modelling choice and its alternative.
+4. **[docs/AGENTIC_AI_PLAN.md](docs/AGENTIC_AI_PLAN.md)** — Task 3 pitch: agentic AI investment system.
 
 **Rendering the results as slides:**
 ```bash
@@ -97,6 +98,7 @@ npx @marp-team/marp-cli docs/RESULTS.md -o results.pdf
 
 | File | Purpose |
 |---|---|
+| [docs/INVESTMENT_MEMO.md](docs/INVESTMENT_MEMO.md) | 3-page investment memo (primary read for a PM) |
 | [docs/RESULTS.md](docs/RESULTS.md) | Headline results (Task 1 + 2 + 3), slide-structured |
 | [docs/METHODS.md](docs/METHODS.md) | Methodology defence (Task 1 + Task 2 combined) |
 | [docs/AGENTIC_AI_PLAN.md](docs/AGENTIC_AI_PLAN.md) | Task 3: agentic AI investment system pitch |
