@@ -130,15 +130,35 @@ test_panel = test.copy()
 test_panel["pred"] = y_pred_test
 
 # ── 2. Bootstrap: AUC CI + monthly prediction CI ─────────────────────────────
+# AUC CI: resample TEST patients (evaluation uncertainty, not model uncertainty).
+# Resampling training patients and refitting would measure coefficient wobble but
+# artificially narrow the CI because the test set is fixed and has many rows per patient.
+# Monthly count CI: resample training patients and refit (model uncertainty on predicted counts).
 
-print(f"Bootstrapping ({N_BOOTSTRAP} patient-level resamples)…")
+print(f"Bootstrapping ({N_BOOTSTRAP} resamples)…")
 rng = np.random.RandomState(42)
-unique_pats = train["patient_id"].unique()
-boot_aucs = []
-boot_monthly = []  # dict month → list of predicted counts
+auc_pt = time_dependent_auc(test_panel)["time_dependent_auc"]
 
+# AUC CI: test-patient bootstrap (vectorised via groupby index lookup)
+unique_test_pats = test_panel["patient_id"].unique()
+pat_to_rows = test_panel.groupby("patient_id").apply(lambda g: g.index.tolist())
+boot_aucs = []
 for _ in range(N_BOOTSTRAP):
-    sampled = rng.choice(unique_pats, size=len(unique_pats), replace=True)
+    sampled = rng.choice(unique_test_pats, size=len(unique_test_pats), replace=True)
+    row_idx = [r for p in sampled for r in pat_to_rows[p]]
+    boot_panel = test_panel.loc[row_idx].copy()
+    if boot_panel["event"].sum() < 2:
+        continue
+    d = time_dependent_auc(boot_panel)
+    if not np.isnan(d["time_dependent_auc"]):
+        boot_aucs.append(d["time_dependent_auc"])
+auc_lo, auc_hi = np.percentile(boot_aucs, [2.5, 97.5])
+
+# Monthly count CI: train-patient bootstrap (model uncertainty)
+unique_train_pats = train["patient_id"].unique()
+boot_monthly = []
+for _ in range(N_BOOTSTRAP):
+    sampled = rng.choice(unique_train_pats, size=len(unique_train_pats), replace=True)
     mask = train["patient_id"].isin(sampled)
     Xb = X_train[mask]
     yb = y_train[mask]
@@ -146,21 +166,12 @@ for _ in range(N_BOOTSTRAP):
         continue
     mb = DiscreteHazardGLM(link="cloglog").fit(Xb, yb)
     pred_b = mb.predict_proba(X_test)[:, 1]
-
-    # AUC per month
     tp = test.copy()
     tp["pred"] = pred_b
-    d = time_dependent_auc(tp)
-    if not np.isnan(d["time_dependent_auc"]):
-        boot_aucs.append(d["time_dependent_auc"])
-
-    # monthly predicted counts
     tp_month = tp.groupby(MONTH_COL)["pred"].sum()
     boot_monthly.append(tp_month)
 
 boot_monthly_df = pd.DataFrame(boot_monthly).fillna(0)
-auc_lo, auc_hi = np.percentile(boot_aucs, [2.5, 97.5])
-auc_pt = time_dependent_auc(test_panel)["time_dependent_auc"]
 
 monthly_obs = test_panel.groupby(MONTH_COL)["event"].sum()
 monthly_pred = test_panel.groupby(MONTH_COL)["pred"].sum()

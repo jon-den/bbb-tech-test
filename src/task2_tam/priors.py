@@ -152,55 +152,28 @@ _register(
     )
 )
 
-# oHCM fraction — the single largest source of uncertainty. Referral cohorts
-# find ~2/3 obstructive with provocative testing; community claims (French,
-# English, US) find ~1/3. Reality sits between — Camzyos label includes latent
-# obstruction (provoked), but community coding rarely captures it.
+# Camzyos-eligible fraction of HCM — single joint prior replacing separate
+# obstructive × symptomatic nodes. Uses the specialty-registry finding directly
+# (30.7% of HCM adults are obstructive AND symptomatic enough for a myosin
+# inhibitor) rather than multiplying two uncertain independent fractions.
+# This avoids the independence assumption and is more directly grounded.
+# Community claims imply ~20%; referral + provocation implies ~40%+.
 _register(
     Prior(
-        name="obstructive_fraction",
-        distribution=_beta_from_ci(mean=0.50, p05=0.35, p95=0.65),
+        name="camzyos_eligible_fraction",
+        distribution=_beta_from_ci(mean=0.307, p05=0.20, p95=0.42),
         source=(
-            "Maron MS et al. Circulation 2006;114:2232-9 (referral, ~66% with provocation); "
-            "Butzner M et al. JACC:Advances 2026 (~37% coded oHCM in US claims); "
-            "Butzner M et al. Front Cardiovasc Med 2022 (10.3389/fcvm.2021.765876, "
-            "4,612 coded oHCM cases in Symphony 2016; most privately insured oHCM undiagnosed); "
-            "Charron P et al. Arch Cardiovasc Dis 2024 (10.1016/j.acvd.2023.10.082, France, 34%); "
-            "Osman M et al. ESC Heart Fail 2025 (10.1002/ehf2.15213, England claims)"
+            "US HCM specialty registry: 30.7% of HCM adults are obstructive AND "
+            "symptomatic enough for a myosin inhibitor (direct observation). "
+            "Concordant with Desai 2022 (MarketScan ~50% symptomatic) × Maron 2006 / "
+            "Butzner 2026 (obstructive range 37-66%). Community claims imply ~20%; "
+            "referral + provocation implies ~40%+"
         ),
         source_type="peer_reviewed",
         notes=(
-            "BIGGEST SINGLE DRIVER of theoretical addressable estimate. Referral vs "
-            "claims gap is ascertainment (provocative testing), not biology. Wide "
-            "90% CI 35-65% intentionally reflects this. If BB Biotech has an internal "
-            "referral-vs-community mix estimate, override at this node."
-        ),
-    )
-)
-
-# Symptomatic NYHA II-III with preserved EF (LVEF ≥ 50%). Within oHCM
-# specifically, symptomatic fraction is high — French registry ~92% NYHA II+;
-# English claims ~72%. Only 5-10% of HCM has reduced EF at baseline, so LVEF
-# criterion is not a major exclusion for oHCM. Blend gives 55-65% of oHCM.
-_register(
-    Prior(
-        name="symptomatic_and_ef_preserved_fraction",
-        distribution=_beta_from_ci(mean=0.60, p05=0.45, p95=0.72),
-        source=(
-            "Desai MY et al. Clin Ther 2022 (10.1016/j.clinthera.2021.11.006, "
-            "US MarketScan, ~50% symptomatic at index — most weighted community source); "
-            "Charron P et al. Arch Cardiovasc Dis 2024 (~92% NYHA II+ in oHCM registry); "
-            "Osman M et al. ESC Heart Fail 2025 (~72% NYHA II+); "
-            "US HCM specialty registry: 30.7% of HCM adults are obstructive AND symptomatic "
-            "enough for myosin inhibitor (joint prior — matches our 0.50 × 0.60 = 0.30 product); "
-            "Ho CY et al. Circulation 2018 (SHaRe, EF distribution)"
-        ),
-        source_type="peer_reviewed",
-        notes=(
-            "Includes LVEF ≥ 50% requirement from Camzyos label. US claims (MarketScan 50%) "
-            "weighted highest; registries (92%, 72%) upweight tail — referral bias inflates "
-            "symptomatic share. Cross-check: obstructive × symptomatic joint product from "
-            "specialty registry = 30.7%, closely matches our 0.30 median product."
+            "Replaces separate obstructive_fraction × symptomatic_and_ef_preserved_fraction. "
+            "Avoids the independence assumption between two uncertain fractions. "
+            "Directly observed joint probability from a US specialty registry."
         ),
     )
 )

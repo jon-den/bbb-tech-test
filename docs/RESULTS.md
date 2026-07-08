@@ -28,13 +28,14 @@ Methodology and technical detail: **[METHODS.md](METHODS.md)**. Full source audi
 
 | | Headline | 80% CI |
 |---|---|---|
-| **Task 1 — adoption model** | 6-feature discrete-time hazard, C-index 0.66 (test); prescriber-driven signal, not severity | Bootstrap AUC [0.70, 0.74] |
-| **Task 2 — Pool A (theoretical US ceiling)** | ~178,000 symptomatic oHCM patients | 118k – 255k |
-| **Task 2 — Pool B (diagnosed treatable today)** | ~117,000 patients | 71k – 188k |
-| **Task 2 — peak US Camzyos revenue** | ~$1.6B by 2029–2030 | $0.8B – $3.0B |
+| **Task 1 — adoption model** | 6-feature discrete-time hazard, C-index 0.66 (test); prescriber-driven signal, not severity | Bootstrap AUC [0.67, 0.78] |
+| **Task 2 — Pool A (prior-predictive)** | ~181,000 symptomatic oHCM patients | 123k – 259k |
+| **Task 2 — Pool B (prior-predictive)** | ~121,000 diagnosed today | 75k – 195k |
+| **Task 2 — Pool B (posterior-predictive, Bayesian update on claims)** | ~17,000 | 11k – 24k |
+| **Task 2 — peak US Camzyos revenue** | ~$1.6B (prior) / ~$0.2B (posterior) by 2029–2030 | see fan chart |
 | **Task 3 — pitch** | Agentic system layering claims + literature + KOL surveys with adversarial fact-checking | — |
 
-Top single lever on the TAM estimate: **diagnosed HCM count** — where BB Biotech's IQVIA / Symphony / Komodo subscription would sharpen the number most.
+Two runs, deliberately: **prior-predictive** propagates literature only (forward simulation) and **posterior-predictive** updates the Camzyos-eligible fraction with a Beta-Binomial conjugate step on our 30k claims cohort. The gap between them ($1.6B → $0.2B peak revenue) *is* the value of the claims subscription: coding-adjusted proxies over 30M lives would land the true answer between these brackets.
 
 ---
 
@@ -98,19 +99,44 @@ The gap between A and B is the undiagnosed pool. Camzyos' 5–10 year growth is 
 
 ---
 
-## Task 2 — Pool A vs Pool B
+## Task 2 — Pool A vs Pool B (prior vs posterior)
 
-10,000 Monte Carlo draws over cited priors:
+Two runs side by side — prior-predictive (literature-only, 10,000 draws) and posterior-predictive (same funnel, eligible fraction updated on our claims cohort via Beta-Binomial conjugate):
 
 ![Pool A vs B](../outputs/task2_tam/09_tam_pools.png)
 
-| Definition | Median | 80% CI |
+| Definition | Prior-predictive (median, 80% CI) | Posterior-predictive (D1 strict) |
 |---|---:|---:|
-| **Pool A** — theoretical ceiling | **~178,000** | 118k – 255k |
-| **Pool B** — diagnosed & treatable today | **~117,000** | 71k – 188k |
-| Undiagnosed gap (A − B) | ~57,000 | wide |
+| **Pool A** — theoretical ceiling | ~181,000 (123k – 259k) | ~25,000 (19k – 31k) |
+| **Pool B** — diagnosed & treatable today | ~121,000 (75k – 195k) | ~17,000 (11k – 24k) |
 
-Pool A aligns with industry framing (~150–200k, per BMS and Cytokinetics investor materials) — concordance across independent sources is the strongest evidence any of these numbers are approximately right.
+The prior-predictive Pool A aligns with industry framing (~150–200k, per BMS and Cytokinetics investor materials). The posterior collapses ~7× because our strict claims-based proxy for symptomatic obstructive disease *is* a lower bound (claims under-code symptoms); the true rate lives between. See the Bayesian-update slide next.
+
+---
+
+## Task 2 — The Bayesian update, plain English
+
+The brief asks us to combine our data with published sources. The prior-predictive run doesn't do that — it just propagates literature. So we update *one* parameter, the Camzyos-eligible fraction, using the one thing our data can measure without an external denominator: what fraction of HCM patients look "treatable" under a claims-based proxy.
+
+**One line of maths.** Beta(α, β) prior + Binomial(n, k) data → Beta(α+k, β+n−k) posterior. That is Bayesian evidence synthesis in the conjugate case.
+
+**Prior weight vs data weight.** Prior effective sample size ≈ 47 (the literature). Data n ≈ 19,000 (our HCM-coded patients). Ratio ≈ 400× — the data dominates and we can say by how much.
+
+**Why the eligible fraction, not the diagnosed count.** The eligible fraction is a *ratio within HCM patients* — our cohort has both top and bottom. The diagnosed count needs a 30M-life denominator we don't have. That extension is what BB Biotech's Symphony/IQVIA/Komodo subscription unlocks — and would collapse the biggest bar in our tornado.
+
+**Defining k to match what the prior means.** The prior means "symptomatic, treatable oHCM" — not "obstructive-coded". If we naively plugged in 150/166 = 90% (obstructive-coded fraction of Camzyos initiators), we'd double the TAM off a coding artefact. Instead we intersect the I421 code with Task 1's escalation markers (Disopyramide fill, SRT, ≥3 HCM meds).
+
+![Bayesian update](../outputs/task2_tam/09_tam_bayes_update.png)
+
+| Definition | k / n | Posterior mean |
+|---|---:|---:|
+| **D1** — I421 ∩ Disopyramide (primary) | 769 / 18,953 | **4.1%** |
+| D2 — I421 ∩ (Diso ∪ SRT) | 777 / 18,953 | 4.2% |
+| D3 — I421 ∩ (Diso ∪ SRT ∪ ≥3 HCM meds) | 822 / 18,953 | 4.4% |
+
+**Honest interpretation for the IC.** ~4% is a *lower bound* on true clinical eligibility, because claims miss symptoms. The 30% literature prior is the *referral-setting* upper end. The truth sits between. We report both — the IC picks which framing fits the commercial question.
+
+**What this is not.** Not full Bayesian inference on the whole funnel (five other priors are still forward-propagated), and not a likelihood on the diagnosed count. It is the one parameter our data can measurably move, done with the correct conjugate arithmetic — precise about what the update buys us. The next step is exactly the Task 3 pitch.
 
 ---
 

@@ -1,4 +1,4 @@
-year,on_drug_p10,on_drug_p50,on_drug_p90,revenue_usdm_p10,revenue_usdm_p50,revenue_usdm_p90
-2025,8447,17676,34705,570.0,1216.0,2436.0
-2028,10189,21026,39962,748.0,1565.0,3027.0
-2030,10437,21132,39411,769.0,1585.0,3023.0
+year,prior_on_drug_p10,prior_on_drug_p50,prior_on_drug_p90,prior_revenue_usdm_p10,prior_revenue_usdm_p50,prior_revenue_usdm_p90,post_on_drug_p10,post_on_drug_p50,post_on_drug_p90,post_revenue_usdm_p10,post_revenue_usdm_p50,post_revenue_usdm_p90
+2025,8794,18390,35232,595.0,1263.0,2478.0,1266,2516,4719,86.0,173.0,329.0
+2028,10639,21764,40820,780.0,1621.0,3079.0,1540,2983,5385,113.0,223.0,410.0
+2030,10829,21856,40243,801.0,1646.0,3070.0,1591,3006,5283,117.0,226.0,408.0

@@ -50,17 +50,52 @@ class TestDiscreteHazardGLM:
         assert "OR" in tbl.columns
 
 
-class TestGBMHazardBenchmark:
-    def test_fit_returns_self(self, binary_data):
-        X, y = binary_data
-        model = GBMHazardBenchmark()
-        assert model.fit(X, y) is model
+@pytest.fixture
+def panel_data():
+    """Person-month panel with patient_id, study_month, features, and event."""
+    rng = np.random.RandomState(0)
+    n_patients = 50
+    months_per_patient = 6
+    rows = []
+    for pid in range(n_patients):
+        event_month = rng.randint(1, months_per_patient + 2)
+        for m in range(1, months_per_patient + 1):
+            if m > event_month:
+                break
+            rows.append(
+                {
+                    "patient_id": pid,
+                    "study_month": m,
+                    "event": int(m == event_month and rng.rand() < 0.15),
+                    "feat_a": rng.randn(),
+                    "feat_b": rng.randn(),
+                }
+            )
+    panel = pd.DataFrame(rows)
+    X = pd.DataFrame(
+        {
+            "time__study_month": panel["study_month"],
+            "features__feat_a": panel["feat_a"],
+            "features__feat_b": panel["feat_b"],
+        },
+        index=panel.index,
+    )
+    y = panel["event"]
+    return X, y, panel
 
-    def test_predict_uses_rate_threshold(self, binary_data):
-        """GBM must share the same rate_ threshold contract as DiscreteHazardGLM."""
-        X, y = binary_data
-        preds = GBMHazardBenchmark().fit(X, y).predict(X)
-        assert preds.sum() > 0, "rate_ threshold not applied in GBMHazardBenchmark.predict()"
+
+class TestGBMHazardBenchmark:
+    def test_fit_returns_self(self, panel_data):
+        X, y, panel = panel_data
+        model = GBMHazardBenchmark()
+        assert model.fit(X, y, panel=panel) is model
+
+    def test_predict_proba_shape(self, panel_data):
+        X, y, panel = panel_data
+        model = GBMHazardBenchmark().fit(X, y, panel=panel)
+        proba = model.predict_proba(X)
+        assert proba.shape == (len(X), 2)
+        assert (proba[:, 1] >= 0).all() and (proba[:, 1] <= 1).all()
 
 
 class TestMarginalRateModel:

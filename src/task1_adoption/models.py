@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.ensemble import HistGradientBoostingClassifier
 from statsmodels.genmod.families import Binomial
 from statsmodels.genmod.families.links import CLogLog as CLogLogLink
 from statsmodels.genmod.families.links import Logit as LogitLink
@@ -117,41 +116,95 @@ class MarginalRateModel(BaseEstimator, ClassifierMixin):
 
 
 class GBMHazardBenchmark(BaseEstimator, ClassifierMixin):
-    """HistGradientBoostingClassifier tuned for low-event-rate hazard panels.
+    """Gradient boosting with Cox partial likelihood loss (scikit-survival).
 
-    Nonlinear benchmark against DiscreteHazardGLM. Not interpretable for the IC
-    (no coefficient table) — compare via time-dependent AUC only.
+    Uses patient-level survival data internally: converts the person-month
+    panel to one row per patient with (event, duration) and baseline features.
+    Predictions are mapped back to per-month hazard probabilities via the
+    fitted survival function.
 
     Args:
-        max_iter: Boosting iterations.
-        max_leaf_nodes: Tree depth cap; 15 (vs. default 31) guards against
-            overfitting on the small event counts typical in hazard panels.
+        n_estimators: Number of boosting iterations.
+        max_depth: Maximum tree depth (3 is conservative for small n).
         min_samples_leaf: Minimum leaf size; stabilises sparse event rows.
         random_state: Random seed.
     """
 
-    def __init__(self, max_iter=100, max_leaf_nodes=15, min_samples_leaf=20, random_state=42):
-        self.max_iter = max_iter
-        self.max_leaf_nodes = max_leaf_nodes
+    def __init__(self, n_estimators=100, max_depth=3, min_samples_leaf=20, random_state=42):
+        self.n_estimators = n_estimators
+        self.max_depth = max_depth
         self.min_samples_leaf = min_samples_leaf
         self.random_state = random_state
 
-    def fit(self, X, y):
-        """Fit HistGradientBoosting on panel data; store gbm_ and rate_; return self."""
-        self.gbm_ = HistGradientBoostingClassifier(
-            max_iter=self.max_iter,
-            max_leaf_nodes=self.max_leaf_nodes,
+    def fit(self, X, y, panel=None):
+        """Fit survival GBM on patient-level data derived from the panel.
+
+        Args:
+            X: Feature DataFrame from ColumnTransformer (person-month rows).
+                Must include a time column (first column) and feature columns.
+            y: Binary event indicator per person-month.
+            panel: Full panel DataFrame with patient_id and study_month.
+                Required to derive patient-level survival data. If None,
+                falls back to the panel passed to the constructor.
+        """
+        from sksurv.ensemble import GradientBoostingSurvivalAnalysis
+
+        if panel is None:
+            panel = self._panel
+        self._panel = panel
+
+        feature_cols = [c for c in X.columns if c.startswith("features__")]
+        time_col = [c for c in X.columns if c.startswith("time__")][0]
+
+        Xp = X.copy()
+        Xp["_patient_id"] = panel.loc[X.index, "patient_id"].values
+        Xp["_event"] = y.values
+        Xp["_month"] = Xp[time_col]
+
+        patient_data = Xp.groupby("_patient_id").agg(
+            event=("_event", "max"),
+            duration=("_month", "max"),
+            **{f: (f, "first") for f in feature_cols},
+        )
+        patient_data["duration"] = patient_data["duration"].astype(float)
+
+        y_surv = np.array(
+            [(bool(e), d) for e, d in zip(patient_data["event"], patient_data["duration"])],
+            dtype=[("event", bool), ("duration", float)],
+        )
+        X_surv = patient_data[feature_cols].values
+
+        self.gbm_ = GradientBoostingSurvivalAnalysis(
+            n_estimators=self.n_estimators,
+            max_depth=self.max_depth,
             min_samples_leaf=self.min_samples_leaf,
             random_state=self.random_state,
         )
-        self.gbm_.fit(X, y)
+        self.gbm_.fit(X_surv, y_surv)
+        self.feature_cols_ = feature_cols
+        self._risk_mean = float(np.mean(self.gbm_.predict(X_surv)))
         self.classes_ = np.array([0, 1])
         self.rate_ = float(np.mean(y))
         return self
 
     def predict_proba(self, X):
-        """Delegate to the fitted gbm_."""
-        return self.gbm_.predict_proba(X)
+        """Per-month hazard pseudo-probabilities from Cox risk scores.
+
+        The Cox PH model produces relative risk scores, not calibrated
+        monthly probabilities. We map scores to the [0, 1] range via
+        logistic calibration against the training event rate. This
+        preserves the patient ranking (AUC) and approximately calibrates
+        to the correct probability scale for BSS.
+        """
+        from scipy.special import expit
+
+        X_feat = X[self.feature_cols_].values
+        risk = self.gbm_.predict(X_feat)
+
+        risk_centered = risk - self._risk_mean
+        p = expit(risk_centered) * 2 * self.rate_
+        p = np.clip(p, 1e-8, 1.0 - 1e-8)
+        return np.column_stack([1 - p, p])
 
     def predict(self, X):
         """Hard labels thresholded at rate_ — same contract as DiscreteHazardGLM.predict()."""

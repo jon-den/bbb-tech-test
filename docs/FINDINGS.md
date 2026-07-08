@@ -329,3 +329,17 @@ Monthly initiations averaged 7.6/month in training (months 1–12) and 6.1/month
 **Fix:** `has_constant='add'` passed to `sm.add_constant` in `_prepare_X` — this skips the ptp check and always adds the constant column. The fix is backward-compatible: training (batch) calls unaffected.
 
 **Risk surface:** Affects any downstream use of `predict_proba` on single-row inputs — patient scoring, counterfactual simulation, archetype analysis.
+
+
+---
+
+## F24: Claims-based proxies for symptomatic oHCM under-count vs literature by ~8×
+
+The Camzyos-eligible fraction prior anchored on the US specialty registry [@desai2022] sits at 30.7%. Our own claims cohort, updated via a Beta-Binomial conjugate step, lands at ~4.1% under three defensible `k_treatable` definitions (I421 ∩ Disopyramide; ∪ SRT; ∪ ≥3 HCM meds — all with n=18,953). The posterior is data-dominated (n ≈ 400× the prior ESS of 47), so the low number is not an artefact of prior weight; it is what the claims proxy actually shows.
+
+**Interpretation.** The posterior is a strict lower bound on true clinical eligibility. Community claims routinely miss symptom severity (LVOT gradient, NYHA class, provocable obstruction on stress testing are not billable events), and even the strictest label-indicated marker (Disopyramide fill) is prescribed to only a fraction of truly eligible patients. The literature prior captures true prevalence in a well-coded referral setting; the posterior captures what a claims-driven commercial team would work with. Both are correct answers to different questions.
+
+**Investment implication.** The Pool B gap between prior-predictive (~121k) and posterior-predictive (~17k) is not model disagreement — it is the coding-visibility gap. With coding-adjusted proxies over 30M lives (BB Biotech's IQVIA / Symphony / Komodo subscription), the true answer lands between these brackets. Sizing the difference *is* the commercial value of the subscription and drives the Task 3 pitch.
+
+**Methodological caveat.** This update replaces the eligible-fraction prior only; the diagnosed-HCM count, HCM prevalence, penetration, ramp, aficamten share, and price all remain forward-propagated. Extending the Bayesian update to the diagnosed count needs a real population denominator — that requires the subscription, and would collapse the largest bar in the current tornado.
+

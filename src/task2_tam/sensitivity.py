@@ -31,20 +31,20 @@ def _tornado(inputs: list[str], f: Callable[[dict[str, float]], float]) -> pd.Da
     return pd.DataFrame(rows).set_index("input").sort_values("swing", ascending=False)
 
 
-_SYM = "symptomatic_and_ef_preserved_fraction"
+_ELG = "camzyos_eligible_fraction"
 
 
 def tornado_for_pool_a() -> pd.DataFrame:
-    """Tornado on Pool A (theoretical addressable): pop × prev × obstructive × sym."""
+    """Tornado on Pool A (theoretical addressable): pop × prev × eligible."""
     return _tornado(
-        ["hcm_prevalence", "obstructive_fraction", _SYM],
-        lambda v: US_ADULTS_20_PLUS * v["hcm_prevalence"] * v["obstructive_fraction"] * v[_SYM],
+        ["hcm_prevalence", _ELG],
+        lambda v: US_ADULTS_20_PLUS * v["hcm_prevalence"] * v[_ELG],
     )
 
 
 def tornado_for_pool_b() -> pd.DataFrame:
-    """Tornado on Pool B (diagnosed & treatable today): diagnosed × obstructive × sym."""
+    """Tornado on Pool B (diagnosed & treatable today): diagnosed × eligible."""
     return _tornado(
-        ["diagnosed_hcm_us_current", "obstructive_fraction", _SYM],
-        lambda v: v["diagnosed_hcm_us_current"] * v["obstructive_fraction"] * v[_SYM],
+        ["diagnosed_hcm_us_current", _ELG],
+        lambda v: v["diagnosed_hcm_us_current"] * v[_ELG],
     )

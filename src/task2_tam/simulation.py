@@ -11,6 +11,7 @@ Returns per-draw arrays for fan chart and summary percentiles.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -23,6 +24,8 @@ from src.task2_tam.diffusion import (
 from src.task2_tam.funnel import draw_funnel
 from src.task2_tam.priors import PRIORS, ExternalAssumptions
 from src.task2_tam.revenue import annual_revenue_from_monthly_patients
+
+FrozenDist = Any
 
 
 @dataclass
@@ -76,16 +79,24 @@ class SimulationResult:
         return pd.DataFrame(rows).set_index("year")
 
 
-def run_simulation(assumptions: ExternalAssumptions | None = None) -> SimulationResult:
+def run_simulation(
+    assumptions: ExternalAssumptions | None = None,
+    eligible_fraction_dist: FrozenDist | None = None,
+) -> SimulationResult:
     """Run the full Monte Carlo pipeline and return a `SimulationResult`.
 
     Args:
         assumptions: External assumptions; defaults to `ExternalAssumptions()`.
+        eligible_fraction_dist: Optional frozen scipy distribution for the
+            Camzyos-eligible fraction. When None (default), samples the
+            literature prior — this is the *prior-predictive* Monte Carlo.
+            Pass a Beta posterior (from `bayesian_update`) to run the
+            *posterior-predictive* TAM that incorporates our claims data.
     """
     a = assumptions or ExternalAssumptions()
     rng = np.random.default_rng(a.random_seed)
 
-    funnel = draw_funnel(a.n_monte_carlo_draws, rng)
+    funnel = draw_funnel(a.n_monte_carlo_draws, rng, eligible_fraction_dist=eligible_fraction_dist)
 
     peak_pen = PRIORS["peak_penetration_of_pool_b"].sample(a.n_monte_carlo_draws, rng)
     yrs_to_80 = PRIORS["years_to_80pct_peak"].sample(a.n_monte_carlo_draws, rng)
