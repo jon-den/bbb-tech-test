@@ -120,7 +120,7 @@ Median time-to-initiation: ~26 months for the escalated-off-meds archetype vs. e
 
 ![Figure: Adoption dynamics](../outputs/task1_adoption/03_adoption_figure.png)
 
-Monthly new starts averaged ~10/month through late 2022 (with a Dec 2022 spike to 18) and decelerated to ~6/month in H2 2023.. Cumulative penetration is modelled as an S-curve (logistic growth), a commonly used framework for specialty drug adoption [TODO add reference]: slow initial uptake, then deceleration as the eligible pool saturates. The 21-month observation window captures only the early phase of this trajectory. By study end, 146/775 = 18.8% of the Disopyramide-conditioned pool had initiated Camzyos.
+Monthly new starts averaged ~10/month through late 2022 (with a Dec 2022 spike to 15) and decelerated to ~6/month in H2 2023. Cumulative penetration is modelled as an S-curve (logistic growth), a commonly used framework for specialty drug adoption [TODO add reference]: slow initial uptake, then deceleration as the eligible pool saturates. The 21-month observation window captures only the early phase of this trajectory. By study end, 146/775 = 18.8% of the Disopyramide-conditioned pool had initiated Camzyos.
 
 The archetype panel (bottom left) shows the spread in predicted monthly hazard across patient profiles. The risk distribution (bottom right) shows 629 remaining patients with mean hazard 1.50%/month.
 
@@ -132,7 +132,7 @@ The archetype panel (bottom left) shows the spread in predicted monthly hazard a
 
 | Metric | Value | Interpretation |
 |---|---|---|
-| AUC | **0.72** [0.67, 0.78] | Ranks future initiators above non-initiators 72% of the time (null = 0.50). |
+| AUC | **0.72** [0.66, 0.77] | Ranks future initiators above non-initiators 72% of the time (null = 0.50). |
 | BSS | **+0.009** [+0.004, +0.012] | Barely above null. At ~1.5% event rate, per-patient predictive power is inherently limited. |
 | Count MAE | **1.7/month** [1.5, 3.7] | Predicted monthly counts track observed within ~2. |
 | Hosmer-Lemeshow | **p = 0.21** | No evidence of miscalibration (p > 0.05 = predicted and observed rates agree across subgroups). |
@@ -145,7 +145,7 @@ The archetype panel (bottom left) shows the spread in predicted monthly hazard a
 
 | Model | AUC | BSS |
 |---|---:|---:|
-| **Refined GLM (cloglog, 4 features)** | **0.72** [0.67, 0.78] | **+0.009** [+0.004, +0.012] |
+| **Refined GLM (cloglog, 4 features)** | **0.72** [0.66, 0.77] | **+0.009** [+0.004, +0.012] |
 | GBM (Cox PH, same features) | 0.69 [0.64, 0.74] | +0.002 [−0.003, +0.004] |
 | Full feature set GLM | 0.68 [0.61, 0.74] | +0.005 [−0.003, +0.013] |
 
@@ -188,7 +188,7 @@ Triangular distributions are the standard choice when only min/mode/max are know
 
 | Parameter | Min | Mode | Max | Source | Rationale |
 |---|---:|---:|---:|---|---|
-| **US adults (2026)** | — | **264M** | — | US Census | Fixed; ~0.5% uncertainty negligible vs other inputs |
+| **US adults (2026)** | — | **264M** | — | US Census | 2026 projection from ACS 2024 (~261M adults 20+); ~0.5% uncertainty negligible vs other inputs |
 | **HCM prevalence (/100k)** | **70** | **80** | **200** | [@husser2018] / [@butzner2021] / [@massera2023] | Germany '15 claims (0.07% = 1/1,372) / US '19 HIRD / imaging-phenotype ceiling (~1:500, biological cap if underdiagnosis fully eliminated) |
 | *Intermediate: obstructive share* | 0.49 | 0.60 | 0.70 | [@schultze2022] / [@batzner2019] | UK/Germany pop. estimates (68% UK, 49% DE) / review (~70%). Mode = midpoint of "half-to-two-thirds" range |
 | *Intermediate: NYHA II-III share* | 0.45 | 0.74 | 0.92 | [@butzner2026] / [@wang2023] / [@charron2026] | Claims 53/117 (imperfect ICD sensitivity, includes some NYHA IV) / US HCP cohort II+III = 74.2% (excl. I 20%, IV 5.7%) / France registry II+III = 92% (excl. IV 4%) |
@@ -252,7 +252,7 @@ MC median **~127k patients**, 80% CI **~84k – 195k**. The distribution is righ
 
 - **Replace synthetic data with full claims data, such as MarketScan.** Collapses the 98.8% Disopyramide artefact, gives 500–2,000 Camzyos initiators (10× current sample), enables subgroup/sensitvity analyses.
 - **Broader feature engineering.** With a larger sample, interaction terms (e.g., `ccb_ever × mri_ever`), time-varying coefficients, richer comorbidity features, and provider-level variables could be explored. With EHR-linked data, clinical/laboratory derived features could be derived. At n=91 events, each additional feature degrades calibration.
-- **Alternative feature selection methods.** Compare stability selection against recursive feature elimination (RFE), Boruta, or permutation importance to assess whether the 6-feature set is robust to the selection method, not just the data resampling.
+- **Alternative feature selection methods.** Compare stability selection against recursive feature elimination (RFE), Boruta, or permutation importance to assess whether the 4-feature set is robust to the selection method, not just the data resampling.
 - **Hyperparameter tuning and model comparison.** With more events, nested temporal CV (expanding-window) becomes feasible for systematic hyperparameter search. Nonlinear models — discrete-time survival forests, gradient-boosted Cox — could then be benchmarked. Cleaner configuration and experiment management with Hydra and Weights & Biases.
 - **Richer diffusion model for the S-curve.** The cumulative-uptake trajectory is currently fitted with a simple 2-parameter logistic. With more post-launch data, richer diffusion models — e.g., Bass 1969, which separately parameterises coefficients of innovation and imitation — could better capture launch dynamics and give a more defensible extrapolation of the deceleration phase.
 

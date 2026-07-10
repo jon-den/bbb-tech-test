@@ -8,13 +8,13 @@ ML take-home assessment: model Camzyos (mavacamten) adoption using US commercial
 - Jupyter notebooks for exploratory analysis, .py scripts for reproducible pipeline
 
 ## Data
-- `synthetic_data/` — unzipped claims data (patients, diagnoses, procedures, prescriptions, enrollment, code_dictionary)
+- `synthetic_data.zip` — claims data (patients, diagnoses, procedures, prescriptions, enrollment, code_dictionary)
 - All data is synthetic but modelled on realistic clinical patterns
 
 ## Conventions
 - Keep analysis reproducible: `requirements.txt` at root
 - Code should run end-to-end from provided data files
-- All narrative markdown lives under `docs/` (WRITEUP, FINDINGS, EXPERIMENTS, AGENTIC_AI_PLAN, CANDIDATE_BRIEF, PLAN_TASK1, TODOS, QUESTIONS_FOR_BBB). Only `README.md` and `CLAUDE.md` stay at repo root.
+- All narrative markdown lives under `docs/`. Only `README.md` and `CLAUDE.md` stay at repo root.
 
 ---
 
@@ -48,27 +48,10 @@ Follow this progression for every modelling task:
 
 ---
 
-## Explainability Standards
-
-### For the Investment Committee
-- Every model output must be accompanied by a plain-language interpretation: "This means that patients with characteristic X are Y times more likely to initiate Camzyos, holding other factors constant."
-- Use SHAP values, partial dependence plots, or coefficient tables — not black-box predictions.
-- Visualisations should stand alone: clear titles, labelled axes, annotated key findings. No "Figure 1" without context.
-
-### For the Quantitative Reviewer
-- Document every modelling choice and its alternative: "We used Cox PH rather than discrete-time hazard because [reason]. The proportional hazards assumption was tested via [method] and [held/was violated — here's what we did about it]."
-- Report full model diagnostics, not just headline metrics.
-- Acknowledge limitations honestly — the IC respects rigour, not false confidence.
-
----
-
 ## Domain-Specific Guidance
 
 ### Camzyos / oHCM context
 - Camzyos (mavacamten) is a first-in-class cardiac myosin inhibitor, FDA-approved April 2022 for symptomatic oHCM. It is distributed through a REMS program.
-- Adoption is driven by specialist prescribers (HCM centres, academic medical centres), not primary care. Model accordingly.
-- Key clinical journey: diagnosis → symptom management (beta-blockers, CCBs) → escalation → Camzyos or septal reduction therapy. The claims data captures this trajectory.
-- Competitor context matters: aficamten (BMS) is in late-stage development. The investment thesis depends partly on competitive dynamics.
 
 ### Claims data caveats to address explicitly
 - This is a **convenience sample** of ~30k cardiac patients from a US commercial claims database. It is NOT a random sample of the US population.
@@ -80,11 +63,6 @@ Follow this progression for every modelling task:
 
 ## BB Biotech Investment Context
 
-### What the IC cares about
-- **Is Camzyos adoption accelerating, plateauing, or decelerating?** Characterise the S-curve.
-- **Who are the next adopters?** What's the profile of patients/physicians not yet on Camzyos who are likely candidates?
-- **How big is the real opportunity?** Not the optimistic KOL estimate, not the bear-case payer restriction scenario — the evidence-weighted central estimate with honest uncertainty bands.
-- **What would change our view?** Identify the key assumptions that, if wrong, would materially change the investment thesis.
 
 ### Analytical integrity
 - Never cherry-pick results that support a bullish or bearish thesis. Present the evidence and let the IC decide.
@@ -95,15 +73,7 @@ Follow this progression for every modelling task:
 
 ## Environment
 
-Always use the project virtual environment at `.venv/`. Never use the system Python or miniconda directly.
-
-```bash
-source .venv/bin/activate          # activate
-.venv/bin/python scripts/foo.py    # or run directly
-.venv/bin/python -m pytest tests/  # tests
-```
-
-The venv is Python 3.13. To recreate: `python3.13 -m venv .venv && pip install -r requirements.txt && pre-commit install`.
+Always use the project virtual environment at `.venv/`.
 
 ---
 
@@ -156,19 +126,3 @@ If the format needs to change, edit the CSS string in `scripts/build_pdf.sh` (do
   - Private functions (`_prefixed`) usually don't need one; add a single line when the name isn't self-explanatory.
   - Never write multi-line docstrings that just restate the function signature.
 - **Inline comments**: only where the *why* is non-obvious. Never restate what the code does. Never reference the ticket, PR, or task.
-
----
-
-## Findings log
-
-`docs/FINDINGS.md` is a running record of analytical findings that shape methodology, interpretation, or limitations. When you discover something non-obvious — a data quality issue, a structural limitation, a result that changes the analytical approach — **add it to docs/FINDINGS.md immediately** with a finding number (F1, F2, ...), the evidence, and the implication for the analysis or investment thesis. Reference findings by number in notebooks and code comments where relevant.
-
----
-
-## Workflow Preferences
-
-- Start every analysis session by stating what question you're answering and why it matters for the investment case.
-- When presenting results, lead with the "so what" for the investment thesis, then show the supporting evidence.
-- If you spot a methodological issue mid-analysis, stop and flag it immediately rather than noting it as a limitation after the fact.
-- Code should be production-quality: typed, tested, documented. But favour clarity over abstraction.
-- Use `print()` statements and intermediate outputs liberally so the analytical narrative is visible.

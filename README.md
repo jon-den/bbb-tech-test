@@ -118,7 +118,7 @@ synthetic_data/            — Input CSVs (patients, diagnoses, procedures, pres
 
 ## Headline results
 
-**Task 1 — adoption model.** 4-feature discrete-time hazard GLM on 775 Disopyramide-experienced patients (146 initiators). Test-set time-dependent AUC **0.72** (95% CI [0.67, 0.78]), count calibration MAE **2.3 patients/month**, Hosmer–Lemeshow p = 0.21. Treatment-escalation history (`ccb_ever` HR **5.40**, 95% CI 2.64–11.06, p < 0.001) dominates; demographics and symptom-burden codes are not predictive. See [CASE_STUDY.md § Task 1](docs/CASE_STUDY.md).
+**Task 1 — adoption model.** 4-feature discrete-time hazard GLM on 775 Disopyramide-experienced patients (146 initiators). Test-set time-dependent AUC **0.72** (95% CI [0.66, 0.77]), count calibration MAE **1.7 patients/month**, Hosmer–Lemeshow p = 0.21. Treatment-escalation history (`ccb_ever` HR **5.40**, 95% CI 2.64–11.06, p < 0.001) dominates; demographics and symptom-burden codes are not predictive. See [CASE_STUDY.md § Task 1](docs/CASE_STUDY.md).
 
 **Task 2 — top-down TAM.** `TAM = US adults × diagnosed HCM prevalence × Camzyos-eligible fraction`, each factor a triangular distribution over directly-cited published bounds with Monte Carlo propagation.
 
