@@ -224,6 +224,68 @@ def time_dependent_auc(
     }
 
 
+# ── Bootstrap confidence intervals ──────────────────────────────────────────
+
+
+def bootstrap_test_ci(
+    dataset: pd.DataFrame,
+    n_bootstrap: int = 500,
+    random_state: int = 42,
+    cols: DatasetCols = _DEFAULT_COLS,
+) -> dict[str, tuple[float, float, float]]:
+    """Bootstrap 95% CIs for AUC, BSS, and count MAE via patient-level resampling.
+
+    Resamples test patients with replacement (preserving the clustered
+    person-month structure) and recomputes each metric per resample.
+
+    Args:
+        dataset: Person-month DataFrame with event and pred columns.
+        n_bootstrap: Number of bootstrap resamples.
+        random_state: Seed for reproducibility.
+        cols: Column name configuration.
+
+    Returns:
+        Dict mapping metric name to (point_estimate, ci_lower, ci_upper).
+    """
+    rng = np.random.RandomState(random_state)
+
+    auc_pt = time_dependent_auc(dataset, cols=cols)["time_dependent_auc"]
+    brier = brier_decomposition(dataset[cols.event], dataset[cols.pred])
+    bss_pt = brier["brier_skill_score"]
+    monthly = count_calibration(
+        dataset, pred_col=cols.pred, month_col=cols.month, event_col=cols.event
+    )
+    mae_pt = float(np.abs(monthly["observed"] - monthly["predicted"]).mean())
+
+    unique_pats = dataset[cols.patient_id].unique()
+    pat_to_rows = dataset.groupby(cols.patient_id).apply(lambda g: g.index.tolist())
+
+    boot_aucs, boot_bss, boot_maes = [], [], []
+    for _ in range(n_bootstrap):
+        sampled = rng.choice(unique_pats, size=len(unique_pats), replace=True)
+        row_idx = [r for p in sampled for r in pat_to_rows[p]]
+        boot = dataset.loc[row_idx]
+        if boot[cols.event].sum() < 2:
+            continue
+        d = time_dependent_auc(boot, cols=cols)
+        if not np.isnan(d["time_dependent_auc"]):
+            boot_aucs.append(d["time_dependent_auc"])
+        b = brier_decomposition(boot[cols.event], boot[cols.pred])
+        boot_bss.append(b["brier_skill_score"])
+        m = count_calibration(boot, pred_col=cols.pred, month_col=cols.month, event_col=cols.event)
+        boot_maes.append(float(np.abs(m["observed"] - m["predicted"]).mean()))
+
+    auc_lo, auc_hi = np.percentile(boot_aucs, [2.5, 97.5])
+    bss_lo, bss_hi = np.percentile(boot_bss, [2.5, 97.5])
+    mae_lo, mae_hi = np.percentile(boot_maes, [2.5, 97.5])
+
+    return {
+        "auc": (auc_pt, float(auc_lo), float(auc_hi)),
+        "bss": (bss_pt, float(bss_lo), float(bss_hi)),
+        "count_mae": (mae_pt, float(mae_lo), float(mae_hi)),
+    }
+
+
 # ── Composite evaluation ─────────────────────────────────────────────────────
 
 

@@ -45,7 +45,9 @@ from src.task1_adoption.config import (
 )
 from src.task1_adoption.data_loading import load_data
 from src.task1_adoption.dataset import build_dataset
-from src.task1_adoption.evaluation import brier_decomposition, time_dependent_auc
+from src.task1_adoption.evaluation import (
+    bootstrap_test_ci,
+)
 from src.task1_adoption.models import DiscreteHazardGLM
 
 np.random.seed(42)
@@ -126,30 +128,17 @@ y_pred_test = model.predict_proba(X_test)[:, 1]
 test_scored = test.copy()
 test_scored["pred"] = y_pred_test
 
-# ── 2. Bootstrap: AUC CI + monthly prediction CI ─────────────────────────────
-# AUC CI: resample TEST patients (evaluation uncertainty, not model uncertainty).
-# Resampling training patients and refitting would measure coefficient wobble but
-# artificially narrow the CI because the test set is fixed and has many rows per patient.
-# Monthly count CI: resample training patients and refit (model uncertainty on predicted counts).
+# ── 2. Bootstrap CIs ─────────────────────────────────────────────────────────
+# Test-patient bootstrap: evaluation uncertainty for AUC, BSS, count MAE.
+# Train-patient bootstrap: model uncertainty on predicted monthly counts (for plot).
 
 print(f"Bootstrapping ({N_BOOTSTRAP} resamples)…")
 rng = np.random.RandomState(42)
-auc_pt = time_dependent_auc(test_scored)["time_dependent_auc"]
 
-# AUC CI: test-patient bootstrap (vectorised via groupby index lookup)
-unique_test_pats = test_scored["patient_id"].unique()
-pat_to_rows = test_scored.groupby("patient_id").apply(lambda g: g.index.tolist())
-boot_aucs = []
-for _ in range(N_BOOTSTRAP):
-    sampled = rng.choice(unique_test_pats, size=len(unique_test_pats), replace=True)
-    row_idx = [r for p in sampled for r in pat_to_rows[p]]
-    boot_sample = test_scored.loc[row_idx].copy()
-    if boot_sample["event"].sum() < 2:
-        continue
-    d = time_dependent_auc(boot_sample)
-    if not np.isnan(d["time_dependent_auc"]):
-        boot_aucs.append(d["time_dependent_auc"])
-auc_lo, auc_hi = np.percentile(boot_aucs, [2.5, 97.5])
+ci = bootstrap_test_ci(test_scored, n_bootstrap=N_BOOTSTRAP, random_state=42)
+auc_pt, auc_lo, auc_hi = ci["auc"]
+bss_pt, bss_lo, bss_hi = ci["bss"]
+mae_pt, mae_lo, mae_hi = ci["count_mae"]
 
 # Monthly count CI: train-patient bootstrap (model uncertainty)
 unique_train_pats = train["patient_id"].unique()
@@ -287,11 +276,9 @@ print(
 
 print("\n[C] UNCERTAINTY")
 print(THIN)
-print(f"  Time-dependent AUC (test): {auc_pt:.3f}  95% bootstrap CI [{auc_lo:.3f}, {auc_hi:.3f}]")
-brier = brier_decomposition(y_test.values, y_pred_test)
-print(
-    f"  Brier Skill Score:         {brier['brier_skill_score']:.4f}  (underpowered: {int(y_test.sum())} test events)"
-)
+print(f"  Time-dependent AUC (test): {auc_pt:.3f}  95% CI [{auc_lo:.3f}, {auc_hi:.3f}]")
+print(f"  Brier Skill Score:         {bss_pt:.4f}  95% CI [{bss_lo:.4f}, {bss_hi:.4f}]")
+print(f"  Count MAE:                 {mae_pt:.1f}/mo   95% CI [{mae_lo:.1f}, {mae_hi:.1f}]")
 print(f"\n  Monthly prediction intervals (test months {split_month + 1}–{max_month}):")
 print(f"  {'Month':>6}  {'Obs':>5}  {'Pred':>6}  {'95% CI':>14}")
 for m in sorted(monthly_obs.index):
@@ -310,7 +297,7 @@ print(top10.to_string(index=False))
 
 # ── 7. Figure ─────────────────────────────────────────────────────────────────
 
-fig, axes = plt.subplots(2, 2, figsize=(16, 11), facecolor=SURFACE)
+fig, axes = plt.subplots(2, 2, figsize=(17, 12), facecolor=SURFACE)
 fig.suptitle(
     "Camzyos Adoption Dynamics",
     fontsize=13,
@@ -322,7 +309,7 @@ fig.suptitle(
 
 for ax in axes.flat:
     style_ax(ax, hide_top_right=True, grid_axis="y")
-    ax.tick_params(labelsize=10)
+    ax.tick_params(labelsize=11)
 
 # ── Panel 1: Monthly adoption (training + test) ──────────────────────────────
 ax1 = axes[0, 0]
@@ -375,12 +362,12 @@ ax1.text(
     ax1.get_ylim()[1] if ax1.get_ylim()[1] > 0 else 10,
     "test →",
     color=C_SPLIT,
-    fontsize=9,
+    fontsize=10,
     va="top",
 )
 
-ax1.set_xlabel("Study month (1 = Apr 2022)", fontsize=11, color=INK_SEC)
-ax1.set_ylabel("New Camzyos initiations", fontsize=11, color=INK_SEC)
+ax1.set_xlabel("Study month (1 = Apr 2022)", fontsize=12, color=INK_SEC)
+ax1.set_ylabel("New Camzyos initiations", fontsize=12, color=INK_SEC)
 ax1.set_title(
     "Monthly new patients — observed vs predicted",
     fontsize=10,
@@ -388,7 +375,7 @@ ax1.set_title(
     color=INK_PRI,
     loc="left",
 )
-ax1.legend(fontsize=10, frameon=False)
+ax1.legend(fontsize=11, frameon=False)
 ax1.set_xlim(0.5, 21.5)
 
 # ── Panel 2: Cumulative S-curve ───────────────────────────────────────────────
@@ -421,13 +408,13 @@ ax2.text(
     months[-1] + 0.3,
     cum_all.iloc[-1] / pool_size * 100,
     f"{int(cum_all.iloc[-1])}/{pool_size}\n({cum_all.iloc[-1] / pool_size:.0%})",
-    fontsize=9,
+    fontsize=10,
     color=C_OBS,
     va="center",
 )
 
-ax2.set_xlabel("Study month", fontsize=11, color=INK_SEC)
-ax2.set_ylabel("Cumulative initiations (% of at-risk pool)", fontsize=11, color=INK_SEC)
+ax2.set_xlabel("Study month", fontsize=12, color=INK_SEC)
+ax2.set_ylabel("Cumulative initiations (% of at-risk pool)", fontsize=12, color=INK_SEC)
 ax2.set_title(
     "S-curve: cumulative penetration of Disopyramide pool",
     fontsize=10,
@@ -436,7 +423,7 @@ ax2.set_title(
     loc="left",
 )
 ax2.yaxis.set_major_formatter(mtick.PercentFormatter())
-ax2.legend(fontsize=10, frameon=False)
+ax2.legend(fontsize=11, frameon=False)
 ax2.set_xlim(0.5, 21.5)
 ax2.set_ylim(0, 105)
 
@@ -453,13 +440,13 @@ for bar, h, med in zip(bars, arch_hazards, arch_medians):
         bar.get_y() + bar.get_height() / 2,
         f"{h:.1%}/mo  |  median TTI {med:.0f} mo",
         va="center",
-        fontsize=9,
+        fontsize=10,
         color=INK_SEC,
     )
 
 ax3.set_yticks(y_pos)
-ax3.set_yticklabels(labels, fontsize=11)
-ax3.set_xlabel("Predicted monthly initiation hazard (%)", fontsize=11, color=INK_SEC)
+ax3.set_yticklabels(labels, fontsize=12)
+ax3.set_xlabel("Predicted monthly initiation hazard (%)", fontsize=12, color=INK_SEC)
 ax3.set_title(
     "Which patients? Predicted hazard by archetype\n"
     f"(study month {ref_month}, median Diso duration {ref_months_diso:.0f} mo)",
@@ -496,8 +483,8 @@ ax4.axvline(
     zorder=3,
 )
 
-ax4.set_xlabel("Predicted monthly hazard (%)", fontsize=11, color=INK_SEC)
-ax4.set_ylabel("Number of remaining patients", fontsize=11, color=INK_SEC)
+ax4.set_xlabel("Predicted monthly hazard (%)", fontsize=12, color=INK_SEC)
+ax4.set_ylabel("Number of remaining patients", fontsize=12, color=INK_SEC)
 ax4.set_title(
     f"Next adopters: risk distribution of {len(last_obs)} remaining patients",
     fontsize=10,
@@ -505,7 +492,7 @@ ax4.set_title(
     color=INK_PRI,
     loc="left",
 )
-ax4.legend(fontsize=10, frameon=False)
+ax4.legend(fontsize=11, frameon=False)
 ax4.xaxis.set_major_formatter(mtick.PercentFormatter())
 
 # Annotation box
@@ -514,7 +501,7 @@ ax4.text(
     0.95,
     f"AUC = {auc_pt:.3f}\n95% CI [{auc_lo:.3f}, {auc_hi:.3f}]",
     transform=ax4.transAxes,
-    fontsize=9.5,
+    fontsize=10.5,
     color=INK_SEC,
     va="top",
     ha="right",

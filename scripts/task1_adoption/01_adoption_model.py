@@ -240,6 +240,14 @@ def main():
     ]
     print(results_df[display_cols].round(4).to_string())
 
+    out_dir = Path("outputs/task1_adoption")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    results_df.reset_index()[["name"] + display_cols].round(6).to_csv(
+        out_dir / "01_model_comparison.csv", index=False
+    )
+    print(f"\nSaved: {out_dir / '01_model_comparison.csv'}")
+
     # ── 6. Coefficient tables ───────────────────────────────────────
     hr_col = "HR" if model_cfg.link == "cloglog" else "OR"
 
@@ -253,6 +261,12 @@ def main():
         print(
             clinical_coefs[[hr_col, f"{hr_col}_lower", f"{hr_col}_upper", "p"]].round(4).to_string()
         )
+
+    refined_coef = models["refined"].coef_table
+    refined_coef = refined_coef.loc[refined_coef.index != "const"].copy()
+    refined_coef.index.name = "feature"
+    refined_coef.reset_index().to_csv(out_dir / "01_coef_refined.csv", index=False)
+    print(f"Saved: {out_dir / '01_coef_refined.csv'}")
 
     # ── 7. CoxPH discretization cross-check ────────────────────────
     print(f"\n{'=' * 70}")
