@@ -97,32 +97,8 @@ If the format needs to change, edit the CSS string in `scripts/build_pdf.sh` (do
 
 ## Code Standards
 
-### scikit-learn first
-- Use `sklearn.pipeline.Pipeline` and the scikit-learn estimator API as the default for all modelling and preprocessing code. Preprocessing, feature engineering, and model fitting should live inside pipelines.
-- When a method isn't available in sklearn (e.g., survival analysis via `lifelines` or `sksurv`), implement custom transformers/estimators conforming to the sklearn API (`BaseEstimator`, `TransformerMixin`) so they compose into pipelines.
-- `ColumnTransformer` for heterogeneous feature types. `FunctionTransformer` for simple mappings. No hand-rolled loops that duplicate what sklearn already provides.
-
-### DataFrames as the default for model fitting
-- **Always pass a pandas DataFrame as X** to `DiscreteHazardGLM.fit()` and all other custom estimators. Never convert to numpy before fitting. statsmodels handles DataFrames natively and automatically propagates column names into `result_.params.index`, making `coef_table` fully labelled without any post-hoc name assignment.
-- After `ColumnTransformer.fit_transform()`, always reconstruct a DataFrame: `pd.DataFrame(ct.fit_transform(X), columns=ct.get_feature_names_out(), index=X.index)`. This ensures column names survive through the entire pipeline.
-- The explainability benefit: the IC can read a coefficient table where rows are labelled `features__ccb_ever` not `x3`. Name your columns well upstream and they stay readable all the way to the output.
-
-### Scripts first, notebooks for presentation only
-- All logic lives in `.py` modules under `src/task1_adoption/` (Task 1) or `src/task2_tam/` (Task 2). Notebooks are thin wrappers that import, run, and display — no business logic in notebook cells.
-- Each analysis phase is a runnable script under `scripts/task1_adoption/` or `scripts/task2_tam/` (e.g. `scripts/task1_adoption/03_adoption_model.py`) that can execute end-to-end from the command line.
-- Outputs go to `outputs/task1_adoption/` or `outputs/task2_tam/` mirroring the module structure.
-- One lightweight summary notebook per phase that calls the script logic and renders outputs for the IC audience.
-
-### Reproducibility
-- The repo must be clean and self-contained. A reviewer should be able to `pip install -r requirements.txt` and run every script end-to-end from `synthetic_data/` with zero manual steps.
-- Pin exact dependency versions in `requirements.txt`.
-- Set random seeds explicitly wherever randomness is involved (`random_state=` params, numpy/scipy seeds).
-- Keep the repo structure tidy: `src/task{1,2}_*/` for reusable modules, `scripts/task{1,2}_*/` for runnable analyses, `outputs/task{1,2}_*/` for figures/CSVs, `notebooks/` for presentation, `synthetic_data/` for inputs. No orphan files in root.
-
-### Documentation
-- **Docstrings**: use [Google style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings).
-  - Public functions/methods always get a docstring: single-line for simple, full for complex or key public APIs.
-  - Full format: one-line summary, blank line, then `Args:`, `Returns:`, `Raises:` sections as needed.
-  - Private functions (`_prefixed`) usually don't need one; add a single line when the name isn't self-explanatory.
-  - Never write multi-line docstrings that just restate the function signature.
-- **Inline comments**: only where the *why* is non-obvious. Never restate what the code does. Never reference the ticket, PR, or task.
+- **sklearn first.** Use `Pipeline`, `ColumnTransformer`, and the estimator API. Custom estimators (e.g. `DiscreteHazardGLM`) must conform to `BaseEstimator`/`TransformerMixin`.
+- **DataFrames, not numpy.** Always pass DataFrames to `.fit()` and reconstruct them after `ColumnTransformer.fit_transform()` so column names propagate to coefficient tables.
+- **Scripts first.** Logic in `src/task{1,2}_*/`, runnable scripts in `scripts/task{1,2}_*/`, outputs in `outputs/task{1,2}_*/`. Notebooks are thin presentation wrappers only.
+- **Reproducibility.** Pin deps in `requirements.txt`, set `random_state=` everywhere, repo runs end-to-end from `synthetic_data/` with zero manual steps.
+- **Docstrings.** Google style. Public functions always; private only when the name isn't self-explanatory.

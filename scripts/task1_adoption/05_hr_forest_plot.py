@@ -36,11 +36,9 @@ C_POINT = C_OBS
 
 FEATURE_LABELS = {
     "features__ccb_ever": "Ever prescribed CCB\n(verapamil / diltiazem)",
-    "features__bb_current": "Active beta-blocker\n(within 90 days)",
-    "features__ccb_current": "Active CCB prescription\n(within 90 days)",
-    "features__mri_ever": "Ever had cardiac MRI\n(CPT 75561)",
+    "features__bb_current": "Active beta-blocker\n(30-day coverage window)",
+    "features__ccb_current": "Active CCB prescription\n(30-day coverage window)",
     "features__months_since_diso": "Months since first\nDisopyramide fill",
-    "features__n_hcm_meds": "Distinct HCM meds\never tried (0–7)",
 }
 
 

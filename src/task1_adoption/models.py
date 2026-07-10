@@ -146,6 +146,14 @@ class GBMHazardBenchmark(BaseEstimator, ClassifierMixin):
             dataset: Full person-month DataFrame with patient_id and study_month.
                 Required to derive patient-level survival data. If None,
                 falls back to the dataset passed to the constructor.
+
+        Note:
+            Duration is set to max(study_month) per patient — absolute calendar
+            months since launch, not time-in-study. Patients entering the risk
+            set after month 1 (47% of the cohort) have inflated durations
+            relative to their actual follow-up. AUC ranking is unaffected;
+            absolute calibration (BSS) for this benchmark should be interpreted
+            with caution.
         """
         from sksurv.ensemble import GradientBoostingSurvivalAnalysis
 
