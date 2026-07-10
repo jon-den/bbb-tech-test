@@ -3,16 +3,16 @@
 Sections
 --------
 1. Paths
-2. Clinical codes  (ICD-10 diagnosis, CPT procedure, drug brand/generic names)
-3. Feature sets    (CLINICAL / REFINED / EXPANDED)
+2. Clinical codes (ICD-10 diagnosis, CPT procedure, drug brand/generic names)
+3. Feature sets   (CLINICAL, REFINED, EXPANDED)
 4. Rolling-window config
-5. Dataclass configs  (PanelConfig, SplitConfig, ModelConfig)
+5. Dataclass configs (DatasetConfig, SplitConfig, ModelConfig)
 """
 
 from dataclasses import dataclass, field
 from pathlib import Path
 
-# ── 1. Paths ────────────────────────────────────────────────────────────────
+# ── 1. Paths ─────────────────────────────────────────────────────────────────
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "synthetic_data"
 
@@ -107,18 +107,17 @@ END_MONTH = "2023-12"
 
 # ── 3. Feature sets ──────────────────────────────────────────────────────────
 #
-# CLINICAL  — 7 features derived from clinical domain knowledge before any
-#             data-driven selection. These are the primary interpretable features
-#             reported to the IC and used as the reference model.
-#
-# REFINED   — 6 features after stability selection and coefficient review.
-#             Drops age, sex, tte_count_12m, hf_flag, symptom_burden_12m
-#             (no signal); adds ccb_ever, bb_current, ccb_current, mri_ever.
-#             This is the production model for scoring.
-#
-# EXPANDED  — 41 features including all multi-window rolling variants.
-#             Used only for stability selection (feature discovery). Not
-#             reported directly due to overfitting risk at n=83 events.
+# CLINICAL  — 7 features chosen a priori on clinical grounds; used as the
+#             reference baseline model.
+# CANDIDATE — 14 mechanistically defensible features that survive a pre-filter
+#             (see docs/CASE_STUDY.md, "Feature selection"). Rare label-derived
+#             composites are dropped from the expanded pool:
+#             cyp_inhibitor_active, diso_ccb_combo_current, dual_bb_ccb_current
+#             — <1% prevalence, prone to spurious perfect selection at n=91 events.
+# REFINED   — 4 features that clear stability selection ≥0.6 on CANDIDATE.
+#             Production model reported in the case study.
+# EXPANDED  — Full unfiltered pool (36 candidates). Retained only so the
+#             pathologies above are reproducible and visible in the appendix.
 
 CLINICAL_FEATURES = [
     "age",
@@ -132,11 +131,26 @@ CLINICAL_FEATURES = [
 
 REFINED_FEATURES = [
     "months_since_diso",
-    "n_hcm_meds",
     "ccb_ever",
     "bb_current",
     "ccb_current",
+]
+
+CANDIDATE_FEATURES = [
+    "age",
+    "sex_F",
+    "months_since_diso",
+    "n_hcm_meds",
+    "hf_flag",
+    "bb_ever",
+    "ccb_ever",
+    "bb_current",
+    "ccb_current",
+    "months_since_last_med_change",
     "mri_ever",
+    "af_flag",
+    "mitral_flag",
+    "diso_mpr_12m",
 ]
 
 EXPANDED_FEATURES = [
@@ -156,36 +170,24 @@ EXPANDED_FEATURES = [
     "er_or_inpatient_12m",
     "af_flag",
     "mitral_flag",
-    "n_cardiac_classes",
-    "antiarrhythmic_ever",
-    "anticoagulant_ever",
-    "sglt2i_ever",
-    "cardiac_drug_days_12m",
     "diso_mpr_12m",
     "cyp_inhibitor_active",
     "dual_bb_ccb_current",
-    "echo_acceleration",
     "diso_ccb_combo_current",
 ]
 
 
 # ── 4. Rolling-window config ─────────────────────────────────────────────────
 #
-# Two distinct "window" concepts:
-#   ROLLING_WINDOWS     — list of window sizes (months) used during the
-#                         stability-selection sweep to discover the best window
-#                         per feature. Produces columns like bnp_test_3m,
-#                         bnp_test_6m, bnp_test_12m for each feature.
-#   PanelConfig.rolling_window — single default window (months) used for
-#                         features that are not swept (e.g. strain_count,
-#                         er_or_inpatient). Set to 12 months by default.
-#
 # ROLLING_FEATURE_CODES: maps feature_base_name → (source, code_column, code(s))
 #   source   : "diagnoses" | "procedures"  — which RawData table to query
 #   code_col : column name to filter on
 #   codes    : string or list of strings matching the code values
+#
+# DatasetConfig.rolling_window — single default window (months) used for
+#   features not in ROLLING_FEATURE_CODES (e.g. strain_count, er_or_inpatient).
 
-ROLLING_WINDOWS = [3, 6, 12]
+ROLLING_WINDOWS = [12]
 
 ROLLING_FEATURE_CODES = {
     "tte_count": ("procedures", "px_code", TTE_CODE),
@@ -195,10 +197,9 @@ ROLLING_FEATURE_CODES = {
     "bnp_test": ("procedures", "px_code", BNP_CODE),
 }
 
-# Auto-generates multi-window column names, e.g. tte_count_3m, tte_count_6m, tte_count_12m.
-# These are appended to EXPANDED_FEATURES so stability selection sees all window variants.
-_ROLLING_MULTI = [f"{feat}_{win}m" for feat in ROLLING_FEATURE_CODES for win in ROLLING_WINDOWS]
-EXPANDED_FEATURES += _ROLLING_MULTI
+# Appends 12m column names (e.g. tte_count_12m) to EXPANDED_FEATURES.
+_ROLLING_12M = [f"{feat}_12m" for feat in ROLLING_FEATURE_CODES]
+EXPANDED_FEATURES += _ROLLING_12M
 
 MONTH_COL = "study_month"
 
@@ -207,8 +208,8 @@ MONTH_COL = "study_month"
 
 
 @dataclass
-class PanelConfig:
-    """Configuration for person-month panel construction."""
+class DatasetConfig:
+    """Configuration for person-month dataset construction."""
 
     risk_set: str = "disopyramide"  # "disopyramide" (conditioning on prior Diso) | "full_ohcm"
     censor_at_first_gap: bool = True  # True = censor at first unenrolled month; False = allow gaps

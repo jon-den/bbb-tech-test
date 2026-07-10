@@ -8,7 +8,7 @@ Tests robustness of the refined model across five axes:
   4. Censoring: censor at first enrollment gap vs allow gaps
   5. Feature set: null / clinical priors / refined / stability-selected
 
-Each configuration builds its own panel, applies the temporal train/test
+Each configuration builds its own dataset, applies the temporal train/test
 split, fits the refined model, and reports calibration + discrimination.
 Primary metric is Brier skill score (calibration). C-index is secondary.
 """
@@ -27,13 +27,13 @@ from src.task1_adoption.config import (
     LAUNCH_MONTH,
     MONTH_COL,
     REFINED_FEATURES,
-    PanelConfig,
+    DatasetConfig,
     SplitConfig,
 )
 from src.task1_adoption.data_loading import load_data
+from src.task1_adoption.dataset import build_dataset
 from src.task1_adoption.evaluation import evaluate_model
 from src.task1_adoption.models import DiscreteHazardGLM
-from src.task1_adoption.panel import build_panel
 
 np.random.seed(42)
 
@@ -64,24 +64,24 @@ def prepare_Xy(train, test, feature_cols):
     return X_train, X_test, train["event"], test["event"]
 
 
-def run_config(data, panel_cfg, split_cfg, feature_cols, label):
-    """Build panel, split, fit refined model, return results dict."""
+def run_config(data, dataset_cfg, split_cfg, feature_cols, label):
+    """Build dataset, split, fit refined model, return results dict."""
     try:
-        panel = build_panel(data, panel_cfg)
+        dataset = build_dataset(data, dataset_cfg)
     except Exception as e:
         return {"label": label, "error": str(e)}
 
-    if panel["event"].sum() < 20:
-        return {"label": label, "error": f"too few events ({panel['event'].sum()})"}
+    if dataset["event"].sum() < 20:
+        return {"label": label, "error": f"too few events ({dataset['event'].sum()})"}
 
     split_month = (
         pd.Period(split_cfg.train_end_month, freq="M") - pd.Period(LAUNCH_MONTH, freq="M")
     ).n + 1
 
-    train = panel[panel[MONTH_COL] <= split_month].copy()
-    test = panel[panel[MONTH_COL] > split_month].copy()
+    train = dataset[dataset[MONTH_COL] <= split_month].copy()
+    test = dataset[dataset[MONTH_COL] > split_month].copy()
 
-    available = [f for f in feature_cols if f in panel.columns]
+    available = [f for f in feature_cols if f in dataset.columns]
     if len(available) < 2:
         return {"label": label, "error": "insufficient features"}
 
@@ -92,7 +92,7 @@ def run_config(data, panel_cfg, split_cfg, feature_cols, label):
     results["label"] = label  # evaluate_model stores as "name"; alias for display
     results["train_events"] = int(y_tr.sum())
     results["test_events"] = int(y_te.sum())
-    results["n_patients"] = panel["patient_id"].nunique()
+    results["n_patients"] = dataset["patient_id"].nunique()
     results["features_used"] = len(available)
     return results
 
@@ -106,26 +106,26 @@ def main():
     results = []
 
     # ── 1. Baseline: standard config ────────────────────────────────
-    cfg = PanelConfig(risk_set="disopyramide", censor_at_first_gap=True)
+    cfg = DatasetConfig(risk_set="disopyramide", censor_at_first_gap=True)
     r = run_config(data, cfg, split_cfg, REFINED_FEATURES, "Baseline (Diso pool, censor gaps)")
     results.append(r)
 
     # ── 2. Risk set: full oHCM pool ──────────────────────────────────
-    # Drops months_since_diso (NaT for non-Diso patients) and mri_ever
+    # Drops months_since_diso (NaT for non-Diso patients)
     ohcm_features = [f for f in REFINED_FEATURES if f not in ["months_since_diso"]]
-    cfg = PanelConfig(risk_set="full_ohcm", censor_at_first_gap=True)
+    cfg = DatasetConfig(risk_set="full_ohcm", censor_at_first_gap=True)
     r = run_config(
         data, cfg, split_cfg, ohcm_features, "Risk set: full oHCM (no Diso conditioning)"
     )
     results.append(r)
 
     # ── 3. Censoring: allow enrollment gaps ──────────────────────────
-    cfg = PanelConfig(risk_set="disopyramide", censor_at_first_gap=False)
+    cfg = DatasetConfig(risk_set="disopyramide", censor_at_first_gap=False)
     r = run_config(data, cfg, split_cfg, REFINED_FEATURES, "Censoring: allow enrollment gaps")
     results.append(r)
 
     # ── 4. Feature set: clinical priors (original 7 features) ────────
-    cfg = PanelConfig(risk_set="disopyramide", censor_at_first_gap=True)
+    cfg = DatasetConfig(risk_set="disopyramide", censor_at_first_gap=True)
     r = run_config(
         data, cfg, split_cfg, CLINICAL_FEATURES, "Features: clinical priors (7 features)"
     )
@@ -133,13 +133,13 @@ def main():
 
     # ── 5. Temporal split sensitivity: earlier cutoff (month 9) ──────
     early_split = SplitConfig(train_end_month="2022-12")  # 9 months post-launch
-    cfg = PanelConfig(risk_set="disopyramide", censor_at_first_gap=True)
+    cfg = DatasetConfig(risk_set="disopyramide", censor_at_first_gap=True)
     r = run_config(data, cfg, early_split, REFINED_FEATURES, "Split: earlier cutoff (Dec 2022)")
     results.append(r)
 
     # ── 6. Temporal split sensitivity: later cutoff (month 18) ───────
     late_split = SplitConfig(train_end_month="2023-09")  # 18 months post-launch
-    cfg = PanelConfig(risk_set="disopyramide", censor_at_first_gap=True)
+    cfg = DatasetConfig(risk_set="disopyramide", censor_at_first_gap=True)
     r = run_config(data, cfg, late_split, REFINED_FEATURES, "Split: later cutoff (Sep 2023)")
     results.append(r)
 
@@ -148,7 +148,7 @@ def main():
     errors = [r for r in results if "error" in r]
 
     print(f"{'=' * 100}")
-    print("SENSITIVITY ANALYSIS — REFINED MODEL (cloglog, 6 features)")
+    print(f"SENSITIVITY ANALYSIS — REFINED MODEL (cloglog, {len(REFINED_FEATURES)} features)")
     print("Primary metric: Brier Skill Score (BSS). Positive = better than null.")
     print(f"{'=' * 100}")
 
@@ -184,8 +184,8 @@ def main():
             delta_auc = row["time_dependent_auc"] - base_auc
             print(f"  {row['label']:55s}  BSS Δ={delta_bss:+.3f}  AUC Δ={delta_auc:+.3f}")
 
-    out_path = Path("outputs/task1_adoption/05_sensitivity_analysis.csv")
-    out_path.parent.mkdir(exist_ok=True)
+    out_path = Path("outputs/task1_adoption/02_sensitivity.csv")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(out_path, index=False)
     print(f"\nResults saved to {out_path}")
 

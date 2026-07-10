@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Task 1: Camzyos adoption model — discrete-time hazard.
 
-Builds a person-month panel for the Disopyramide-conditioned risk set,
+Builds a person-month dataset for the Disopyramide-conditioned risk set,
 fits discrete-time hazard GLMs, runs stability selection on the expanded
 feature set, and evaluates against baselines.
 """
@@ -17,16 +17,18 @@ import pandas as pd
 from sklearn.compose import ColumnTransformer
 
 from src.task1_adoption.config import (
+    CANDIDATE_FEATURES,
     CLINICAL_FEATURES,
     EXPANDED_FEATURES,
     LAUNCH_MONTH,
     MONTH_COL,
     REFINED_FEATURES,
+    DatasetConfig,
     ModelConfig,
-    PanelConfig,
     SplitConfig,
 )
 from src.task1_adoption.data_loading import load_data
+from src.task1_adoption.dataset import build_dataset
 from src.task1_adoption.evaluation import (
     calibration_plot,
     count_calibration,
@@ -39,7 +41,6 @@ from src.task1_adoption.models import (
     MarginalRateModel,
     cox_discretization_check,
 )
-from src.task1_adoption.panel import build_panel
 from src.task1_adoption.selection import StabilitySelector, lasso_path_plot
 
 np.random.seed(42)
@@ -76,33 +77,33 @@ def prepare_Xy(train, test, feature_cols):
 
 
 def main():
-    panel_cfg = PanelConfig()
+    dataset_cfg = DatasetConfig()
     split_cfg = SplitConfig()
     model_cfg = ModelConfig()
 
-    # ── 1. Load data and build panel ────────────────────────────────
+    # ── 1. Load data and build dataset ──────────────────────────────
     print("Loading data...")
     data = load_data()
 
-    print(f"Building person-month panel (risk_set={panel_cfg.risk_set})...")
-    panel = build_panel(data, panel_cfg)
+    print(f"Building person-month dataset (risk_set={dataset_cfg.risk_set})...")
+    dataset = build_dataset(data, dataset_cfg)
 
-    print("\nPanel summary:")
-    print(f"  Rows:     {len(panel):,}")
-    print(f"  Patients: {panel['patient_id'].nunique():,}")
-    print(f"  Events:   {panel['event'].sum():,}")
-    print(f"  Months:   {panel['study_month'].min()} – {panel['study_month'].max()}")
-    print(f"  Event rate: {panel['event'].mean():.4f}")
+    print("\nDataset summary:")
+    print(f"  Rows:     {len(dataset):,}")
+    print(f"  Patients: {dataset['patient_id'].nunique():,}")
+    print(f"  Events:   {dataset['event'].sum():,}")
+    print(f"  Months:   {dataset['study_month'].min()} – {dataset['study_month'].max()}")
+    print(f"  Event rate: {dataset['event'].mean():.4f}")
     skip = {"patient_id", "month", "study_month", "event"}
-    print(f"  Features available: {[c for c in panel.columns if c not in skip]}")
+    print(f"  Features available: {[c for c in dataset.columns if c not in skip]}")
 
     # ── 2. Temporal train/test split ────────────────────────────────
     split_month = (
         pd.Period(split_cfg.train_end_month, freq="M") - pd.Period(LAUNCH_MONTH, freq="M")
     ).n + 1
 
-    train = panel[panel["study_month"] <= split_month].copy()
-    test = panel[panel["study_month"] > split_month].copy()
+    train = dataset[dataset["study_month"] <= split_month].copy()
+    test = dataset[dataset["study_month"] > split_month].copy()
 
     print(f"\nTemporal split at study_month {split_month} ({split_cfg.train_end_month}):")
     print(
@@ -114,10 +115,24 @@ def main():
         f"{test['patient_id'].nunique()} patients"
     )
 
-    # ── 3. Stability selection on expanded feature set ──────────────
-    expanded_available = [f for f in EXPANDED_FEATURES if f in panel.columns]
+    # ── 3. Stability selection on candidate pool ────────────────────
+    #
+    # Two-stage selection (see docs/CASE_STUDY.md → "Feature selection"):
+    #   1. Pre-filter: 36 raw candidates → CANDIDATE_FEATURES (14) by
+    #      dropping rolling-window near-duplicates and rare label-derived
+    #      composites (<1% prevalence) that game stability selection at n=91
+    #      events.
+    #   2. Stability selection with patient-level bootstrap (200×70%) and
+    #      patient-GroupKFold CV for the L1 penalty. Threshold 0.6 →
+    #      5 features.
+    #
+    # The unfiltered EXPANDED_FEATURES pool is fit separately below solely
+    # so the pathologies (multi-window redundancy, rare-composite artefacts)
+    # are visible in the appendix.
+    candidate_available = [f for f in CANDIDATE_FEATURES if f in dataset.columns]
+    expanded_available = [f for f in EXPANDED_FEATURES if f in dataset.columns]
     print(f"\n{'=' * 70}")
-    print(f"STABILITY SELECTION ({len(expanded_available)} candidates, C=auto)")
+    print(f"STABILITY SELECTION ({len(candidate_available)} candidates, C=auto)")
     print(f"{'=' * 70}")
 
     selector = StabilitySelector(
@@ -125,10 +140,11 @@ def main():
         sample_fraction=0.7,
         threshold=0.6,
         C="auto",
+        cv_for_C="group_patient",
         random_state=42,
     )
     selector.fit(
-        train[expanded_available],
+        train[candidate_available],
         train["event"],
         patient_ids=train["patient_id"].values,
     )
@@ -143,8 +159,8 @@ def main():
     print(f"\nSelected ({len(selected)}): {selected}")
 
     # ── 4. Prepare feature matrices ─────────────────────────────────
-    clinical_available = [f for f in CLINICAL_FEATURES if f in panel.columns]
-    refined_available = [f for f in REFINED_FEATURES if f in panel.columns]
+    clinical_available = [f for f in CLINICAL_FEATURES if f in dataset.columns]
+    refined_available = [f for f in REFINED_FEATURES if f in dataset.columns]
 
     datasets = {}
     for label, feats in [
@@ -182,7 +198,7 @@ def main():
     results.append(r)
     models["clinical"] = m
 
-    # Refined model (6 features: treatment journey + specialist engagement)
+    # Refined model (treatment journey + specialist engagement, from stability selection)
     Xtr_r, Xte_r = datasets["refined"][:2]
     m = DiscreteHazardGLM(link=model_cfg.link).fit(Xtr_r, y_train)
     r, _ = evaluate_model(m, Xte_r, y_test, test, f"Refined ({len(refined_available)})")
@@ -205,7 +221,7 @@ def main():
     models["expanded"] = m
 
     # GBM benchmark (nonlinear; interpret AUC only, not coefficients)
-    m = GBMHazardBenchmark().fit(Xtr_r, y_train)
+    m = GBMHazardBenchmark().fit(Xtr_r, y_train, dataset=train)
     r, _ = evaluate_model(
         m, Xte_r, y_test, test, f"GBM benchmark ({len(refined_available)} features)"
     )
@@ -276,9 +292,10 @@ def main():
     axes[1, 1].set_title("Count-level calibration (test set)")
 
     plt.tight_layout()
-    plt.savefig("outputs/task1_adoption/03_model_evaluation.png", dpi=150, bbox_inches="tight")
-    print("\nPlots saved to outputs/task1_adoption/03_model_evaluation.png")
-    plt.show()
+    out = Path("outputs/task1_adoption/01_model_evaluation.png")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(out, dpi=150, bbox_inches="tight")
+    print(f"\nPlots saved to {out}")
 
 
 if __name__ == "__main__":

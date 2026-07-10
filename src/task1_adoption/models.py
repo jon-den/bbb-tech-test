@@ -27,7 +27,7 @@ class DiscreteHazardGLM(BaseEstimator, ClassifierMixin):
         self.add_intercept = add_intercept
 
     def fit(self, X, y):
-        """Fit binary GLM on panel data; return self.
+        """Fit binary GLM on person-month data; return self.
 
         Args:
             X: Feature DataFrame. Passing a DataFrame (not a numpy array)
@@ -119,7 +119,7 @@ class GBMHazardBenchmark(BaseEstimator, ClassifierMixin):
     """Gradient boosting with Cox partial likelihood loss (scikit-survival).
 
     Uses patient-level survival data internally: converts the person-month
-    panel to one row per patient with (event, duration) and baseline features.
+    dataset to one row per patient with (event, duration) and baseline features.
     Predictions are mapped back to per-month hazard probabilities via the
     fitted survival function.
 
@@ -136,28 +136,28 @@ class GBMHazardBenchmark(BaseEstimator, ClassifierMixin):
         self.min_samples_leaf = min_samples_leaf
         self.random_state = random_state
 
-    def fit(self, X, y, panel=None):
-        """Fit survival GBM on patient-level data derived from the panel.
+    def fit(self, X, y, dataset=None):
+        """Fit survival GBM on patient-level data derived from the dataset.
 
         Args:
             X: Feature DataFrame from ColumnTransformer (person-month rows).
                 Must include a time column (first column) and feature columns.
             y: Binary event indicator per person-month.
-            panel: Full panel DataFrame with patient_id and study_month.
+            dataset: Full person-month DataFrame with patient_id and study_month.
                 Required to derive patient-level survival data. If None,
-                falls back to the panel passed to the constructor.
+                falls back to the dataset passed to the constructor.
         """
         from sksurv.ensemble import GradientBoostingSurvivalAnalysis
 
-        if panel is None:
-            panel = self._panel
-        self._panel = panel
+        if dataset is None:
+            dataset = self._dataset
+        self._dataset = dataset
 
         feature_cols = [c for c in X.columns if c.startswith("features__")]
         time_col = [c for c in X.columns if c.startswith("time__")][0]
 
         Xp = X.copy()
-        Xp["_patient_id"] = panel.loc[X.index, "patient_id"].values
+        Xp["_patient_id"] = dataset.loc[X.index, "patient_id"].values
         Xp["_event"] = y.values
         Xp["_month"] = Xp[time_col]
 
@@ -212,7 +212,7 @@ class GBMHazardBenchmark(BaseEstimator, ClassifierMixin):
 
 
 def cox_discretization_check(
-    panel_train: pd.DataFrame,
+    dataset_train: pd.DataFrame,
     feature_cols: list,
     glm: DiscreteHazardGLM,
     id_col: str = "patient_id",
@@ -226,7 +226,7 @@ def cox_discretization_check(
     grouped-Cox approximation is sound.
 
     Args:
-        panel_train: Person-month DataFrame containing id_col, event_col,
+        dataset_train: Person-month DataFrame containing id_col, event_col,
             month_col, and all feature_cols.
         feature_cols: Clinical feature names. Exclude study_month — Cox absorbs
             time via the baseline hazard.
@@ -241,11 +241,11 @@ def cox_discretization_check(
     """
     from lifelines import CoxTimeVaryingFitter
 
-    # Build start/stop panel for lifelines (counting-process format)
+    # Build start/stop dataset for lifelines (counting-process format)
     keep_cols = [id_col, event_col, month_col] + [
-        f for f in feature_cols if f in panel_train.columns
+        f for f in feature_cols if f in dataset_train.columns
     ]
-    df = panel_train[keep_cols].copy()
+    df = dataset_train[keep_cols].copy()
     df["_start"] = df[month_col] - 1
     df["_stop"] = df[month_col]
     df = df.drop(columns=[month_col])
@@ -277,7 +277,7 @@ def cox_discretization_check(
 
     rows = []
     for feat in feature_cols:
-        if feat not in panel_train.columns:
+        if feat not in dataset_train.columns:
             continue
         c = float(cox_hr.get(feat, float("nan")))
         g = glm_hr.get(feat, float("nan"))

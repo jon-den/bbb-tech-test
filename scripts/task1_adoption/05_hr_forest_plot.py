@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-"""Hazard ratio forest plot for the 6-feature refined model.
+"""Hazard ratio forest plot for the 4-feature refined model.
 
-Output: outputs/task1_adoption/10_hr_forest_plot.png
-Run:    .venv/bin/python scripts/task1_adoption/10_hr_forest_plot.py
+Output: outputs/task1_adoption/05_hr_forest_plot.png
+Run:    .venv/bin/python scripts/task1_adoption/05_hr_forest_plot.py
 """
 
 import sys
@@ -20,13 +20,13 @@ from src.task1_adoption.config import (
     LAUNCH_MONTH,
     MONTH_COL,
     REFINED_FEATURES,
+    DatasetConfig,
     ModelConfig,
-    PanelConfig,
     SplitConfig,
 )
 from src.task1_adoption.data_loading import load_data
+from src.task1_adoption.dataset import build_dataset
 from src.task1_adoption.models import DiscreteHazardGLM
-from src.task1_adoption.panel import build_panel
 
 np.random.seed(42)
 
@@ -50,13 +50,13 @@ FEATURE_LABELS = {
 
 def main():
     data = load_data()
-    panel = build_panel(data, PanelConfig())
+    dataset = build_dataset(data, DatasetConfig())
     split_month = (
         pd.Period(SplitConfig().train_end_month, freq="M") - pd.Period(LAUNCH_MONTH, freq="M")
     ).n + 1
-    train = panel[panel[MONTH_COL] <= split_month].copy()
+    train = dataset[dataset[MONTH_COL] <= split_month].copy()
 
-    refined = [f for f in REFINED_FEATURES if f in panel.columns]
+    refined = [f for f in REFINED_FEATURES if f in dataset.columns]
     ct = ColumnTransformer(
         [("time", "passthrough", [MONTH_COL]), ("features", "passthrough", refined)],
         remainder="drop",
@@ -123,7 +123,7 @@ def main():
     ax.set_xscale("log")
     ax.set_xlabel("Hazard Ratio (log scale)", fontsize=10, color=INK_SEC)
     ax.set_title(
-        "Feature hazard ratios — 6-feature refined model\n"
+        f"Feature hazard ratios — {len(features)}-feature refined model\n"
         "95% confidence intervals  |  ** p<0.01  * p<0.05",
         fontsize=11,
         fontweight="bold",
@@ -138,7 +138,7 @@ def main():
     ax.xaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: f"{x:g}"))
 
     plt.tight_layout()
-    out_path = Path("outputs/task1_adoption/10_hr_forest_plot.png")
+    out_path = Path("outputs/task1_adoption/05_hr_forest_plot.png")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(out_path, dpi=150, bbox_inches="tight", facecolor=SURFACE)
     print(f"Saved to {out_path}")

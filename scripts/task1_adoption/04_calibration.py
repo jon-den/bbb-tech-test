@@ -10,8 +10,8 @@ Calibration matters for the investment case: predicted hazard directly feeds the
 expected-new-starts projection used in market sizing. If the model says 2%/month
 for a patient cohort, that should mean ~2% initiate per month.
 
-Output: outputs/task1_adoption/08_calibration.png
-Run:    .venv/bin/python3.13 scripts/08_calibration.py
+Output: outputs/task1_adoption/04_calibration.png
+Run:    .venv/bin/python scripts/task1_adoption/04_calibration.py
 """
 
 import sys
@@ -30,12 +30,12 @@ from src.task1_adoption.config import (
     LAUNCH_MONTH,
     MONTH_COL,
     REFINED_FEATURES,
-    PanelConfig,
+    DatasetConfig,
     SplitConfig,
 )
 from src.task1_adoption.data_loading import load_data
+from src.task1_adoption.dataset import build_dataset
 from src.task1_adoption.models import DiscreteHazardGLM
-from src.task1_adoption.panel import build_panel
 
 np.random.seed(42)
 
@@ -59,17 +59,17 @@ def make_preprocessor(feature_cols):
 
 # ── 1. Build and fit ──────────────────────────────────────────────────────────
 
-print("Building panel and fitting model…")
+print("Building dataset and fitting model…")
 data = load_data()
-panel = build_panel(data, PanelConfig())
+dataset = build_dataset(data, DatasetConfig())
 split_month = (
     pd.Period(SplitConfig().train_end_month, freq="M") - pd.Period(LAUNCH_MONTH, freq="M")
 ).n + 1
 
-train = panel[panel[MONTH_COL] <= split_month].copy()
-test = panel[panel[MONTH_COL] > split_month].copy()
+train = dataset[dataset[MONTH_COL] <= split_month].copy()
+test = dataset[dataset[MONTH_COL] > split_month].copy()
 
-refined_available = [f for f in REFINED_FEATURES if f in panel.columns]
+refined_available = [f for f in REFINED_FEATURES if f in dataset.columns]
 all_cols = refined_available + [MONTH_COL]
 
 ct = make_preprocessor(refined_available)
@@ -380,7 +380,8 @@ for i, row in all_sub.iterrows():
     )
 
 plt.tight_layout(rect=[0, 0, 1, 0.94])
-out_path = Path("outputs/task1_adoption/08_calibration.png")
+out_path = Path("outputs/task1_adoption/04_calibration.png")
+out_path.parent.mkdir(parents=True, exist_ok=True)
 plt.savefig(out_path, dpi=150, bbox_inches="tight", facecolor=SURFACE)
 print(f"\nFigure saved to {out_path}")
-plt.show()
+plt.close()

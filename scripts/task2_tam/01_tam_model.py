@@ -7,11 +7,11 @@ where s is the claims capture rate. The posterior on p drives the TAM;
 the posterior on s is the calibration insight.
 
 Outputs (all in outputs/task2_tam/):
-    09_tam_summary.csv              — posterior summary of p, s, N, TAM
-    09_tam_posterior.png            — 2-panel figure (TAM distribution + joint p,s)
-    09_tam_prior_sensitivity.csv    — how TAM moves under alternative priors
+    01_tam_posterior.png            — 2-panel figure (TAM distribution + joint p,s)
+    01_tam_prior_sensitivity.csv    — how TAM moves under alternative priors
+    01_tam_over_time.csv            — TAM projection to 2027 / 2030
 
-Run: .venv/bin/python3.13 scripts/task2_tam/09_tam_model.py
+Run: .venv/bin/python scripts/task2_tam/01_tam_model.py
 """
 
 import sys
@@ -110,10 +110,8 @@ for name, x, fmt in [
         f"    {name:<22} mean {fmt.format(mean):>12}   80% CI [{fmt.format(lo)}, {fmt.format(hi)}]"
     )
 
-summary_df = pd.DataFrame(summary_rows)
-summary_path = OUT / "09_tam_summary.csv"
-summary_df.to_csv(summary_path, index=False)
-print(f"\n  → {summary_path}")
+# Posterior summary is printed above; CSVs below capture the artefacts
+# actually cited in the case study (prior sensitivity + TAM over time).
 
 # ── 4. Prior sensitivity — one-at-a-time on the two structural priors ────────
 # The IC wants to see how the TAM CI moves under alternative reasonable priors.
@@ -149,7 +147,7 @@ for label, sp in sens_scenarios:
     )
 
 sens_df = pd.DataFrame(sens_rows)
-sens_path = OUT / "09_tam_prior_sensitivity.csv"
+sens_path = OUT / "01_tam_prior_sensitivity.csv"
 sens_df.to_csv(sens_path, index=False)
 print(f"\n  → {sens_path}")
 
@@ -185,7 +183,7 @@ for label, g in GROWTH_SCENARIOS.items():
         )
 
 tam_time_df = pd.DataFrame(tam_time_rows)
-tam_time_path = OUT / "09_tam_over_time.csv"
+tam_time_path = OUT / "01_tam_over_time.csv"
 tam_time_df.to_csv(tam_time_path, index=False)
 print(f"\n  → {tam_time_path}")
 
@@ -274,7 +272,7 @@ fig.suptitle(
     y=1.02,
 )
 plt.tight_layout(rect=[0, 0, 1, 0.98])
-fig_path = OUT / "09_tam_posterior.png"
+fig_path = OUT / "01_tam_posterior.png"
 plt.savefig(fig_path, dpi=150, bbox_inches="tight", facecolor=SURFACE)
 plt.close()
 print(f"\n  → {fig_path}")

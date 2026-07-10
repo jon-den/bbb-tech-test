@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
+from sklearn.model_selection import GroupKFold, KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import resample
 
@@ -27,20 +28,32 @@ class StabilitySelector(BaseEstimator, TransformerMixin):
         threshold (float): Minimum selection probability to keep a feature.
         C (float | str): Inverse regularisation strength. "auto" tunes via
             LogisticRegressionCV on the full training set before bootstrapping.
+        cv_for_C (str): CV strategy for auto-C tuning. "group_patient" uses
+            GroupKFold on patient_ids (matches the bootstrap resampling
+            scheme — no leakage across person-months of the same patient);
+            "random_5" / "random_10" use ordinary KFold (leaky in this
+            person-month setting but included for comparability).
         random_state (int): Random seed.
     """
 
     def __init__(
-        self, n_bootstrap=200, sample_fraction=0.7, threshold=0.6, C="auto", random_state=42
+        self,
+        n_bootstrap=200,
+        sample_fraction=0.7,
+        threshold=0.6,
+        C="auto",
+        cv_for_C="group_patient",
+        random_state=42,
     ):
         self.n_bootstrap = n_bootstrap
         self.sample_fraction = sample_fraction
         self.threshold = threshold
         self.C = C
+        self.cv_for_C = cv_for_C
         self.random_state = random_state
 
     def fit(self, X, y, patient_ids=None):
-        """Fit stability selector on a person-month panel.
+        """Fit stability selector on a person-month dataset.
 
         Args:
             X (pd.DataFrame): Feature DataFrame with named columns.
@@ -63,7 +76,12 @@ class StabilitySelector(BaseEstimator, TransformerMixin):
         feature_names = X.columns
 
         # Tune C if "auto"
-        C = self._resolve_C(X_scaled, np.asarray(y), rng)
+        C = self._resolve_C(
+            X_scaled,
+            np.asarray(y),
+            rng,
+            patient_ids=np.asarray(patient_ids) if patient_ids is not None else None,
+        )
         self.C_used_ = C
 
         if patient_ids is not None:
@@ -115,24 +133,44 @@ class StabilitySelector(BaseEstimator, TransformerMixin):
         )
         return self
 
-    def _resolve_C(self, X: np.ndarray, y: np.ndarray, rng: np.random.RandomState) -> float:
+    def _resolve_C(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        rng: np.random.RandomState,
+        patient_ids: np.ndarray | None = None,
+    ) -> float:
         """Return C, tuning via LogisticRegressionCV when C='auto'.
 
         Args:
             X (np.ndarray): Scaled feature matrix.
             y (np.ndarray): Binary event indicator.
             rng (np.random.RandomState): Seeded state for reproducibility.
+            patient_ids (np.ndarray | None): Required for cv_for_C='group_patient'.
 
         Returns:
             float: Regularisation strength C.
         """
         if self.C != "auto":
             return self.C
+        if self.cv_for_C == "group_patient":
+            if patient_ids is None:
+                raise ValueError(
+                    "cv_for_C='group_patient' requires patient_ids to be passed to fit()."
+                )
+            cv = list(GroupKFold(n_splits=5).split(X, y, groups=patient_ids))
+        elif self.cv_for_C == "random_5":
+            cv = KFold(n_splits=5, shuffle=True, random_state=self.random_state)
+        elif self.cv_for_C == "random_10":
+            cv = KFold(n_splits=10, shuffle=True, random_state=self.random_state)
+        else:
+            raise ValueError(f"unknown cv_for_C: {self.cv_for_C}")
+
         cv_model = LogisticRegressionCV(
             penalty="l1",
             solver="saga",
             Cs=np.logspace(-3, 1, 20),
-            cv=5,
+            cv=cv,
             max_iter=5000,
             scoring="neg_log_loss",
             random_state=rng.randint(0, 2**31),

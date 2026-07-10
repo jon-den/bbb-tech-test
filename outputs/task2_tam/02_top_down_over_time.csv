@@ -1,0 +1,10 @@
+scenario,growth_rate,year,tam
+floor_2pct,0.02,2026,126682
+floor_2pct,0.02,2028,131800
+floor_2pct,0.02,2030,137124
+base_4_7pct,0.047,2026,126682
+base_4_7pct,0.047,2028,138870
+base_4_7pct,0.047,2030,152230
+ceiling_7_4pct,0.074,2026,126682
+ceiling_7_4pct,0.074,2028,146124
+ceiling_7_4pct,0.074,2030,168551

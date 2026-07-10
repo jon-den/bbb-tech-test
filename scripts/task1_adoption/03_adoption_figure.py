@@ -1,15 +1,16 @@
 #!/usr/bin/env python
-"""Task 1 full answer: who initiates, when, and with what uncertainty?
+"""Task 1 adoption figure — four-panel summary for the case study.
 
-Three-part analysis:
-  1. Which patients — patient archetypes from refined model coefficients
-  2. When — predicted hazard by archetype; median time-to-initiation
-  3. Uptake evolution — adoption curve with bootstrap prediction intervals
-  Uncertainty throughout: bootstrap CIs on AUC and monthly counts (500 iters,
-  patient-level resampling).
+Panels:
+  1. Monthly new starts (observed + predicted) with bootstrap CI
+  2. Cumulative S-curve (observed + predicted, % of at-risk pool)
+  3. Patient archetypes — predicted hazard by treatment-trajectory profile
+  4. Risk distribution of remaining at-risk patients
 
-Output: outputs/task1_adoption/07_adoption_answer.png
-Run:    .venv/bin/python3.13 scripts/07_adoption_answer.py
+Bootstrap CIs: 500 iterations, patient-level resampling.
+
+Output: outputs/task1_adoption/03_adoption_figure.png
+Run:    .venv/bin/python scripts/task1_adoption/03_adoption_figure.py
 """
 
 import sys
@@ -27,13 +28,13 @@ from src.task1_adoption.config import (
     LAUNCH_MONTH,
     MONTH_COL,
     REFINED_FEATURES,
-    PanelConfig,
+    DatasetConfig,
     SplitConfig,
 )
 from src.task1_adoption.data_loading import load_data
+from src.task1_adoption.dataset import build_dataset
 from src.task1_adoption.evaluation import brier_decomposition, time_dependent_auc
 from src.task1_adoption.models import DiscreteHazardGLM
-from src.task1_adoption.panel import build_panel
 
 np.random.seed(42)
 
@@ -53,32 +54,28 @@ N_BOOTSTRAP = 500
 
 ARCHETYPES = [
     {
-        "label": "Not escalated\n(on BB, no CCB, no MRI)",
+        "label": "Not escalated\n(on BB, no CCB history)",
         "ccb_ever": 0,
         "bb_current": 1,
         "ccb_current": 0,
-        "mri_ever": 0,
     },
     {
-        "label": "CCB-experienced\n(off meds, no MRI)",
-        "ccb_ever": 1,
-        "bb_current": 0,
-        "ccb_current": 0,
-        "mri_ever": 0,
-    },
-    {
-        "label": "Specialist-engaged\n(off meds, had MRI)",
-        "ccb_ever": 1,
-        "bb_current": 0,
-        "ccb_current": 0,
-        "mri_ever": 1,
-    },
-    {
-        "label": "Currently managed\n(on meds, had MRI)",
+        "label": "Currently managed\n(on BB + CCB, CCB history)",
         "ccb_ever": 1,
         "bb_current": 1,
         "ccb_current": 1,
-        "mri_ever": 1,
+    },
+    {
+        "label": "CCB-tried, still on BB\n(escalated, not off meds)",
+        "ccb_ever": 1,
+        "bb_current": 1,
+        "ccb_current": 0,
+    },
+    {
+        "label": "Escalated, off meds\n(CCB history, off both)",
+        "ccb_ever": 1,
+        "bb_current": 0,
+        "ccb_current": 0,
     },
 ]
 
@@ -109,25 +106,25 @@ def median_time_to_initiation(h: float) -> float:
 
 # ── 1. Build data ─────────────────────────────────────────────────────────────
 
-print("Loading and building panel…")
+print("Loading and building dataset…")
 data = load_data()
-panel = build_panel(data, PanelConfig())
+dataset = build_dataset(data, DatasetConfig())
 split_month = (
     pd.Period(SplitConfig().train_end_month, freq="M") - pd.Period(LAUNCH_MONTH, freq="M")
 ).n + 1
-max_month = int(panel[MONTH_COL].max())
+max_month = int(dataset[MONTH_COL].max())
 
-train = panel[panel[MONTH_COL] <= split_month].copy()
-test = panel[panel[MONTH_COL] > split_month].copy()
+train = dataset[dataset[MONTH_COL] <= split_month].copy()
+test = dataset[dataset[MONTH_COL] > split_month].copy()
 
-refined_available = [f for f in REFINED_FEATURES if f in panel.columns]
+refined_available = [f for f in REFINED_FEATURES if f in dataset.columns]
 X_train, X_test, y_train, y_test, ct = prepare(train, test, refined_available)
 
 model = DiscreteHazardGLM(link="cloglog").fit(X_train, y_train)
 y_pred_test = model.predict_proba(X_test)[:, 1]
 
-test_panel = test.copy()
-test_panel["pred"] = y_pred_test
+test_scored = test.copy()
+test_scored["pred"] = y_pred_test
 
 # ── 2. Bootstrap: AUC CI + monthly prediction CI ─────────────────────────────
 # AUC CI: resample TEST patients (evaluation uncertainty, not model uncertainty).
@@ -137,19 +134,19 @@ test_panel["pred"] = y_pred_test
 
 print(f"Bootstrapping ({N_BOOTSTRAP} resamples)…")
 rng = np.random.RandomState(42)
-auc_pt = time_dependent_auc(test_panel)["time_dependent_auc"]
+auc_pt = time_dependent_auc(test_scored)["time_dependent_auc"]
 
 # AUC CI: test-patient bootstrap (vectorised via groupby index lookup)
-unique_test_pats = test_panel["patient_id"].unique()
-pat_to_rows = test_panel.groupby("patient_id").apply(lambda g: g.index.tolist())
+unique_test_pats = test_scored["patient_id"].unique()
+pat_to_rows = test_scored.groupby("patient_id").apply(lambda g: g.index.tolist())
 boot_aucs = []
 for _ in range(N_BOOTSTRAP):
     sampled = rng.choice(unique_test_pats, size=len(unique_test_pats), replace=True)
     row_idx = [r for p in sampled for r in pat_to_rows[p]]
-    boot_panel = test_panel.loc[row_idx].copy()
-    if boot_panel["event"].sum() < 2:
+    boot_sample = test_scored.loc[row_idx].copy()
+    if boot_sample["event"].sum() < 2:
         continue
-    d = time_dependent_auc(boot_panel)
+    d = time_dependent_auc(boot_sample)
     if not np.isnan(d["time_dependent_auc"]):
         boot_aucs.append(d["time_dependent_auc"])
 auc_lo, auc_hi = np.percentile(boot_aucs, [2.5, 97.5])
@@ -173,8 +170,8 @@ for _ in range(N_BOOTSTRAP):
 
 boot_monthly_df = pd.DataFrame(boot_monthly).fillna(0)
 
-monthly_obs = test_panel.groupby(MONTH_COL)["event"].sum()
-monthly_pred = test_panel.groupby(MONTH_COL)["pred"].sum()
+monthly_obs = test_scored.groupby(MONTH_COL)["event"].sum()
+monthly_pred = test_scored.groupby(MONTH_COL)["pred"].sum()
 monthly_ci_lo = boot_monthly_df.quantile(0.025)
 monthly_ci_hi = boot_monthly_df.quantile(0.975)
 
@@ -185,8 +182,7 @@ obs_ci_hi = monthly_obs + 1.96 * np.sqrt(monthly_obs)
 # ── 3. Patient archetypes ─────────────────────────────────────────────────────
 
 ref_month = split_month  # end of training period
-ref_months_diso = float(panel.loc[panel[MONTH_COL] == ref_month, "months_since_diso"].median())
-ref_n_meds = float(panel.loc[panel[MONTH_COL] == ref_month, "n_hcm_meds"].median())
+ref_months_diso = float(dataset.loc[dataset[MONTH_COL] == ref_month, "months_since_diso"].median())
 
 arch_hazards, arch_medians = [], []
 for arch in ARCHETYPES:
@@ -194,11 +190,9 @@ for arch in ARCHETYPES:
         {
             MONTH_COL: [ref_month],
             "months_since_diso": [ref_months_diso],
-            "n_hcm_meds": [ref_n_meds],
             "ccb_ever": [arch["ccb_ever"]],
             "bb_current": [arch["bb_current"]],
             "ccb_current": [arch["ccb_current"]],
-            "mri_ever": [arch["mri_ever"]],
         }
     )
     X_arch = pd.DataFrame(
@@ -210,8 +204,8 @@ for arch in ARCHETYPES:
 
 # ── 4. Score remaining at-risk patients ───────────────────────────────────────
 
-initiated = set(panel.loc[panel["event"] == 1, "patient_id"])
-remaining = panel[~panel["patient_id"].isin(initiated)]
+initiated = set(dataset.loc[dataset["event"] == 1, "patient_id"])
+remaining = dataset[~dataset["patient_id"].isin(initiated)]
 last_obs = remaining.loc[remaining.groupby("patient_id")[MONTH_COL].idxmax()]
 
 X_rem = pd.DataFrame(
@@ -224,7 +218,7 @@ last_obs["pred_hazard"] = model.predict_proba(X_rem)[:, 1]
 
 # ── 5. Cumulative S-curve ─────────────────────────────────────────────────────
 
-cum_obs = panel.groupby(MONTH_COL)["event"].sum().cumsum()
+cum_obs = dataset.groupby(MONTH_COL)["event"].sum().cumsum()
 cum_pred_test = monthly_pred.cumsum() + train["event"].sum()  # add train events for continuity
 cum_pred_train = (
     train.copy()
@@ -234,7 +228,7 @@ cum_pred_train = (
     .cumsum()
 )
 
-pool_size = panel["patient_id"].nunique()
+pool_size = dataset["patient_id"].nunique()
 
 # ── 6. Print summary ──────────────────────────────────────────────────────────
 
@@ -255,7 +249,7 @@ for arch, h, med in zip(ARCHETYPES, arch_hazards, arch_medians):
 
 print(
     f"\n  Reference month: {ref_month} ({SplitConfig().train_end_month}),",
-    f"months_since_diso={ref_months_diso:.0f}, n_hcm_meds={ref_n_meds:.0f}",
+    f"months_since_diso={ref_months_diso:.0f}",
 )
 print(
     f"\n  Key driver: ccb_ever HR = {np.exp(model.result_.params['features__ccb_ever']):.2f}",
@@ -310,7 +304,7 @@ for m in sorted(monthly_obs.index):
 print("\n[D] TOP NEXT-ADOPTER CANDIDATES")
 print(THIN)
 top10 = last_obs.nlargest(10, "pred_hazard")[
-    ["patient_id", MONTH_COL, "pred_hazard", "ccb_ever", "bb_current", "mri_ever"]
+    ["patient_id", MONTH_COL, "pred_hazard", "ccb_ever", "bb_current", "ccb_current"]
 ]
 print(top10.to_string(index=False))
 
@@ -336,9 +330,9 @@ for ax in axes.flat:
 # ── Panel 1: Monthly adoption (training + test) ──────────────────────────────
 ax1 = axes[0, 0]
 
-all_monthly_obs = panel.groupby(MONTH_COL)["event"].sum()
-train_pred_panel = train.copy().assign(pred=model.predict_proba(X_train)[:, 1])
-all_monthly_pred_train = train_pred_panel.groupby(MONTH_COL)["pred"].sum()
+all_monthly_obs = dataset.groupby(MONTH_COL)["event"].sum()
+train_scored = train.copy().assign(pred=model.predict_proba(X_train)[:, 1])
+all_monthly_pred_train = train_scored.groupby(MONTH_COL)["pred"].sum()
 all_monthly_pred = pd.concat([all_monthly_pred_train, monthly_pred])
 
 months = all_monthly_obs.index.tolist()
@@ -531,7 +525,8 @@ ax4.text(
 )
 
 plt.tight_layout(rect=[0, 0, 1, 0.96])
-out_path = Path("outputs/task1_adoption/07_adoption_answer.png")
+out_path = Path("outputs/task1_adoption/03_adoption_figure.png")
+out_path.parent.mkdir(parents=True, exist_ok=True)
 plt.savefig(out_path, dpi=150, bbox_inches="tight", facecolor=SURFACE)
 print(f"\nFigure saved to {out_path}")
-plt.show()
+plt.close()

@@ -14,7 +14,7 @@ from src.task1_adoption.models import DiscreteHazardGLM, GBMHazardBenchmark, Mar
 
 @pytest.fixture
 def binary_data():
-    """Minimal binary dataset with ~5% event rate (typical for monthly hazard panels)."""
+    """Minimal binary dataset with ~5% event rate (typical for monthly hazard data)."""
     rng = np.random.RandomState(0)
     n = 200
     X = pd.DataFrame({"x1": rng.randn(n), "x2": rng.randn(n)})
@@ -51,8 +51,8 @@ class TestDiscreteHazardGLM:
 
 
 @pytest.fixture
-def panel_data():
-    """Person-month panel with patient_id, study_month, features, and event."""
+def person_month_data():
+    """Person-month dataset with patient_id, study_month, features, and event."""
     rng = np.random.RandomState(0)
     n_patients = 50
     months_per_patient = 6
@@ -71,28 +71,28 @@ def panel_data():
                     "feat_b": rng.randn(),
                 }
             )
-    panel = pd.DataFrame(rows)
+    dataset = pd.DataFrame(rows)
     X = pd.DataFrame(
         {
-            "time__study_month": panel["study_month"],
-            "features__feat_a": panel["feat_a"],
-            "features__feat_b": panel["feat_b"],
+            "time__study_month": dataset["study_month"],
+            "features__feat_a": dataset["feat_a"],
+            "features__feat_b": dataset["feat_b"],
         },
-        index=panel.index,
+        index=dataset.index,
     )
-    y = panel["event"]
-    return X, y, panel
+    y = dataset["event"]
+    return X, y, dataset
 
 
 class TestGBMHazardBenchmark:
-    def test_fit_returns_self(self, panel_data):
-        X, y, panel = panel_data
+    def test_fit_returns_self(self, person_month_data):
+        X, y, dataset = person_month_data
         model = GBMHazardBenchmark()
-        assert model.fit(X, y, panel=panel) is model
+        assert model.fit(X, y, dataset=dataset) is model
 
-    def test_predict_proba_shape(self, panel_data):
-        X, y, panel = panel_data
-        model = GBMHazardBenchmark().fit(X, y, panel=panel)
+    def test_predict_proba_shape(self, person_month_data):
+        X, y, dataset = person_month_data
+        model = GBMHazardBenchmark().fit(X, y, dataset=dataset)
         proba = model.predict_proba(X)
         assert proba.shape == (len(X), 2)
         assert (proba[:, 1] >= 0).all() and (proba[:, 1] <= 1).all()

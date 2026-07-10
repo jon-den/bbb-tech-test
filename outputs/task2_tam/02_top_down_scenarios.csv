@@ -1,0 +1,4 @@
+scenario,prev_per_100k,elig_fraction,tam
+Bear,70.0,0.2205,40748
+Base,80.0,0.444,93772
+Bull,200.0,0.644,340032

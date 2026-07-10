@@ -1,0 +1,8 @@
+[tool.pytest.ini_options]
+# Silence third-party deprecation noise; still surface warnings from our code.
+filterwarnings = [
+    "ignore::FutureWarning:sklearn.*",
+    "ignore::UserWarning:sklearn.*",
+    "ignore::DeprecationWarning:pkg_resources.*",
+]
+addopts = "-q"

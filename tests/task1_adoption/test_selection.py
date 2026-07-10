@@ -14,8 +14,8 @@ from src.task1_adoption.selection import StabilitySelector
 
 
 @pytest.fixture
-def panel_data():
-    """Small person-month panel with 3 features and ~5% event rate."""
+def person_month_data():
+    """Small person-month dataset with 3 features and ~5% event rate."""
     rng = np.random.RandomState(1)
     n_patients, n_months = 80, 5
     patient_ids = np.repeat(np.arange(n_patients), n_months)
@@ -31,20 +31,20 @@ def panel_data():
 
 
 class TestStabilitySelector:
-    def test_fit_returns_self(self, panel_data):
-        X, y, pids = panel_data
+    def test_fit_returns_self(self, person_month_data):
+        X, y, pids = person_month_data
         sel = StabilitySelector(n_bootstrap=10, random_state=0)
         assert sel.fit(X, y, patient_ids=pids) is sel
 
-    def test_selected_features_subset_of_columns(self, panel_data):
-        X, y, pids = panel_data
+    def test_selected_features_subset_of_columns(self, person_month_data):
+        X, y, pids = person_month_data
         sel = StabilitySelector(n_bootstrap=10, threshold=0.0, random_state=0).fit(
             X, y, patient_ids=pids
         )
         assert set(sel.selected_features_).issubset(set(X.columns))
 
-    def test_transform_returns_subset(self, panel_data):
-        X, y, pids = panel_data
+    def test_transform_returns_subset(self, person_month_data):
+        X, y, pids = person_month_data
         sel = StabilitySelector(n_bootstrap=10, threshold=0.0, random_state=0).fit(
             X, y, patient_ids=pids
         )
@@ -52,25 +52,25 @@ class TestStabilitySelector:
         assert isinstance(X_t, pd.DataFrame)
         assert set(X_t.columns).issubset(set(X.columns))
 
-    def test_transform_requires_dataframe(self, panel_data):
+    def test_transform_requires_dataframe(self, person_month_data):
         """Documents the DataFrame-only API contract — numpy arrays are rejected."""
-        X, y, pids = panel_data
+        X, y, pids = person_month_data
         sel = StabilitySelector(n_bootstrap=10, threshold=0.0, random_state=0).fit(
             X, y, patient_ids=pids
         )
         with pytest.raises(ValueError, match="DataFrame"):
             sel.transform(X.values)
 
-    def test_c_used_stored(self, panel_data):
+    def test_c_used_stored(self, person_month_data):
         """C='auto' must tune via CV and store the result for reproducibility."""
-        X, y, pids = panel_data
+        X, y, pids = person_month_data
         sel = StabilitySelector(n_bootstrap=10, C="auto", random_state=0).fit(
             X, y, patient_ids=pids
         )
         assert hasattr(sel, "C_used_") and sel.C_used_ > 0
 
-    def test_without_patient_ids(self, panel_data):
+    def test_without_patient_ids(self, person_month_data):
         """Fallback: subsample rows when patient_ids not provided."""
-        X, y, _ = panel_data
+        X, y, _ = person_month_data
         sel = StabilitySelector(n_bootstrap=10, random_state=0).fit(X, y)
         assert hasattr(sel, "selected_features_")

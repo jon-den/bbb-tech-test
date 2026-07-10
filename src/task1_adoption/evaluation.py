@@ -12,8 +12,8 @@ from sklearn.metrics import brier_score_loss, roc_auc_score
 
 
 @dataclass
-class PanelCols:
-    """Column name configuration for panel DataFrames.
+class DatasetCols:
+    """Column name configuration for person-month dataset DataFrames.
 
     Centralises the magic strings used across calibration and discrimination
     functions so that renaming a column requires changing one place.
@@ -25,7 +25,7 @@ class PanelCols:
     pred: str = "pred"
 
 
-_DEFAULT_COLS = PanelCols()
+_DEFAULT_COLS = DatasetCols()
 
 
 # ── Row-level calibration ────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ def calibration_plot(
 
 
 def count_calibration(
-    panel: pd.DataFrame,
+    dataset: pd.DataFrame,
     pred_col: str = _DEFAULT_COLS.pred,
     month_col: str = _DEFAULT_COLS.month,
     event_col: str = _DEFAULT_COLS.event,
@@ -91,7 +91,7 @@ def count_calibration(
     starts. Compare to observed count.
     """
     return (
-        panel.groupby(month_col)
+        dataset.groupby(month_col)
         .agg(
             observed=(event_col, "sum"),
             predicted=(pred_col, "sum"),
@@ -144,9 +144,9 @@ def brier_decomposition(
 
 
 def time_dependent_auc(
-    panel: pd.DataFrame,
+    dataset: pd.DataFrame,
     pred_col: str = _DEFAULT_COLS.pred,
-    cols: PanelCols = _DEFAULT_COLS,
+    cols: DatasetCols = _DEFAULT_COLS,
 ) -> dict[str, float | int]:
     """Monthly time-dependent AUROC, weighted by event count.
 
@@ -165,7 +165,7 @@ def time_dependent_auc(
     """
     aucs: list[float] = []
     weights: list[int] = []
-    for _, grp in panel.groupby(cols.month):
+    for _, grp in dataset.groupby(cols.month):
         n_ev = int(grp[cols.event].sum())
         n_ctrl = int((grp[cols.event] == 0).sum())
         if n_ev == 0 or n_ctrl == 0:
@@ -191,9 +191,9 @@ def evaluate_model(
     model: BaseEstimator,
     X_test: pd.DataFrame,
     y_test: pd.Series,
-    panel_test: pd.DataFrame,
+    dataset_test: pd.DataFrame,
     model_name: str = "Model",
-    cols: PanelCols = _DEFAULT_COLS,
+    cols: DatasetCols = _DEFAULT_COLS,
 ) -> tuple[dict, pd.DataFrame]:
     """Run full evaluation suite; return results dict and monthly calibration table.
 
@@ -210,14 +210,14 @@ def evaluate_model(
     """
     y_pred_test = model.predict_proba(X_test)[:, 1]
 
-    panel_test = panel_test.copy()
-    panel_test[cols.pred] = y_pred_test
+    dataset_test = dataset_test.copy()
+    dataset_test[cols.pred] = y_pred_test
 
     brier = brier_decomposition(y_test.values, y_pred_test)
     monthly = count_calibration(
-        panel_test, pred_col=cols.pred, month_col=cols.month, event_col=cols.event
+        dataset_test, pred_col=cols.pred, month_col=cols.month, event_col=cols.event
     )
-    disc = time_dependent_auc(panel_test, pred_col=cols.pred, cols=cols)
+    disc = time_dependent_auc(dataset_test, pred_col=cols.pred, cols=cols)
 
     results = {
         "name": model_name,
