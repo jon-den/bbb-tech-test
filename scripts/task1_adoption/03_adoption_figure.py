@@ -34,6 +34,7 @@ from src.style import (
     INK_MUT,
     INK_PRI,
     INK_SEC,
+    SPINE,
     SURFACE,
     style_ax,
 )
@@ -581,7 +582,7 @@ ax4.text(
     color=INK_SEC,
     va="top",
     ha="right",
-    bbox=dict(boxstyle="round,pad=0.4", fc=SURFACE, ec=GRID, lw=0.8),
+    bbox=dict(boxstyle="round,pad=0.4", fc=SURFACE, ec=SPINE, lw=0.8),
 )
 
 plt.tight_layout(rect=[0, 0, 1, 0.96])

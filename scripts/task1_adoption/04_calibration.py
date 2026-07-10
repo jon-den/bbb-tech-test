@@ -31,10 +31,10 @@ from src.style import (
     C_OBS,
     C_PRED,
     C_REF,
-    GRID,
     INK_MUT,
     INK_PRI,
     INK_SEC,
+    SPINE,
     SURFACE,
     style_ax,
 )
@@ -338,7 +338,7 @@ ax2.text(
     color=INK_SEC,
     va="top",
     ha="right",
-    bbox=dict(boxstyle="round,pad=0.3", fc=SURFACE, ec=GRID, lw=0.8),
+    bbox=dict(boxstyle="round,pad=0.3", fc=SURFACE, ec=SPINE, lw=0.8),
 )
 
 # ── Panel 3: Subgroup calibration ─────────────────────────────────────────────
