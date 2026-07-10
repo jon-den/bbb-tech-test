@@ -130,6 +130,21 @@ def main():
 
     ax.xaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: f"{x:g}"))
 
+    # Save HR table
+    hr_out = Path("outputs/task1_adoption")
+    hr_out.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        {
+            "feature": features,
+            "label": [FEATURE_LABELS.get(f, f) for f in features],
+            "HR": hrs,
+            "HR_lower": lo,
+            "HR_upper": hi,
+            "p": pvals,
+        }
+    ).sort_values("HR", ascending=False).to_csv(hr_out / "05_hr_table.csv", index=False)
+    print(f"Saved: {hr_out}/05_hr_table.csv")
+
     plt.tight_layout()
     out_path = Path("outputs/task1_adoption/05_hr_forest_plot.png")
     out_path.parent.mkdir(parents=True, exist_ok=True)

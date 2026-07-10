@@ -13,6 +13,7 @@ Output: outputs/task1_adoption/03_adoption_figure.png
 Run:    .venv/bin/python scripts/task1_adoption/03_adoption_figure.py
 """
 
+import json
 import sys
 from pathlib import Path
 
@@ -295,12 +296,87 @@ top10 = last_obs.nlargest(10, "pred_hazard")[
 ]
 print(top10.to_string(index=False))
 
+# ── 6b. Save structured outputs ──────────────────────────────────────────────
+
+out_dir = Path("outputs/task1_adoption")
+out_dir.mkdir(parents=True, exist_ok=True)
+
+pd.DataFrame(
+    [
+        {
+            "label": arch["label"].replace("\n", " "),
+            "ccb_ever": arch["ccb_ever"],
+            "bb_current": arch["bb_current"],
+            "ccb_current": arch["ccb_current"],
+            "hazard_per_month": round(h, 6),
+            "hazard_per_month_pct": round(h * 100, 4),
+            "median_tti_months": round(med, 1),
+        }
+        for arch, h, med in zip(ARCHETYPES, arch_hazards, arch_medians)
+    ]
+).to_csv(out_dir / "03_archetypes.csv", index=False)
+
+_all_obs = dataset.groupby(MONTH_COL)["event"].sum()
+_train_pred = (
+    train.copy().assign(pred=model.predict_proba(X_train)[:, 1]).groupby(MONTH_COL)["pred"].sum()
+)
+pd.DataFrame(
+    [
+        {
+            "study_month": int(mo),
+            "period": "test" if mo > split_month else "train",
+            "observed": int(_all_obs.get(mo, 0)),
+            "predicted": round(float(monthly_pred.get(mo, _train_pred.get(mo, 0))), 3),
+            "pred_ci_lo": round(float(monthly_ci_lo.get(mo, float("nan"))), 3)
+            if mo > split_month
+            else None,
+            "pred_ci_hi": round(float(monthly_ci_hi.get(mo, float("nan"))), 3)
+            if mo > split_month
+            else None,
+        }
+        for mo in sorted(_all_obs.index)
+    ]
+).to_csv(out_dir / "03_monthly_predictions.csv", index=False)
+
+_mean_rem_h = last_obs["pred_hazard"].mean()
+(out_dir / "03_summary.json").write_text(
+    json.dumps(
+        {
+            "auc_point": round(auc_pt, 4),
+            "auc_ci_lo": round(auc_lo, 4),
+            "auc_ci_hi": round(auc_hi, 4),
+            "brier_skill_score": round(bss_pt, 4),
+            "bss_ci_lo": round(bss_lo, 4),
+            "bss_ci_hi": round(bss_hi, 4),
+            "count_mae": round(mae_pt, 3),
+            "count_mae_ci_lo": round(mae_lo, 3),
+            "count_mae_ci_hi": round(mae_hi, 3),
+            "n_test_events": int(y_test.sum()),
+            "pool_size": int(pool_size),
+            "initiated": int(cum_obs.iloc[-1]),
+            "remaining": int(pool_size - cum_obs.iloc[-1]),
+            "cumulative_penetration_pct": round(cum_obs.iloc[-1] / pool_size * 100, 2),
+            "mean_hazard_remaining_pct": round(_mean_rem_h * 100, 4),
+            "steady_state_new_starts_per_month": round(
+                _mean_rem_h * (pool_size - int(cum_obs.iloc[-1])), 1
+            ),
+            "split_month": int(split_month),
+            "max_month": int(max_month),
+        },
+        indent=2,
+    )
+)
+
+print(f"\nSaved: {out_dir}/03_archetypes.csv")
+print(f"Saved: {out_dir}/03_monthly_predictions.csv")
+print(f"Saved: {out_dir}/03_summary.json")
+
 # ── 7. Figure ─────────────────────────────────────────────────────────────────
 
-fig, axes = plt.subplots(2, 2, figsize=(17, 12), facecolor=SURFACE)
+fig, axes = plt.subplots(2, 2, figsize=(22, 15), facecolor=SURFACE)
 fig.suptitle(
     "Camzyos Adoption Dynamics",
-    fontsize=13,
+    fontsize=22,
     fontweight="bold",
     color=INK_PRI,
     x=0.02,
@@ -309,7 +385,7 @@ fig.suptitle(
 
 for ax in axes.flat:
     style_ax(ax, hide_top_right=True, grid_axis="y")
-    ax.tick_params(labelsize=11)
+    ax.tick_params(labelsize=15)
 
 # ── Panel 1: Monthly adoption (training + test) ──────────────────────────────
 ax1 = axes[0, 0]
@@ -362,20 +438,20 @@ ax1.text(
     ax1.get_ylim()[1] if ax1.get_ylim()[1] > 0 else 10,
     "test →",
     color=C_SPLIT,
-    fontsize=10,
+    fontsize=15,
     va="top",
 )
 
-ax1.set_xlabel("Study month (1 = Apr 2022)", fontsize=12, color=INK_SEC)
-ax1.set_ylabel("New Camzyos initiations", fontsize=12, color=INK_SEC)
+ax1.set_xlabel("Study month (1 = Apr 2022)", fontsize=17, color=INK_SEC)
+ax1.set_ylabel("New Camzyos initiations", fontsize=17, color=INK_SEC)
 ax1.set_title(
     "Monthly new patients — observed vs predicted",
-    fontsize=10,
+    fontsize=15,
     fontweight="bold",
     color=INK_PRI,
     loc="left",
 )
-ax1.legend(fontsize=11, frameon=False)
+ax1.legend(fontsize=14, frameon=False)
 ax1.set_xlim(0.5, 21.5)
 
 # ── Panel 2: Cumulative S-curve ───────────────────────────────────────────────
@@ -408,22 +484,22 @@ ax2.text(
     months[-1] + 0.3,
     cum_all.iloc[-1] / pool_size * 100,
     f"{int(cum_all.iloc[-1])}/{pool_size}\n({cum_all.iloc[-1] / pool_size:.0%})",
-    fontsize=10,
+    fontsize=15,
     color=C_OBS,
     va="center",
 )
 
-ax2.set_xlabel("Study month", fontsize=12, color=INK_SEC)
-ax2.set_ylabel("Cumulative initiations (% of at-risk pool)", fontsize=12, color=INK_SEC)
+ax2.set_xlabel("Study month", fontsize=17, color=INK_SEC)
+ax2.set_ylabel("Cumulative initiations (% of at-risk pool)", fontsize=17, color=INK_SEC)
 ax2.set_title(
     "S-curve: cumulative penetration of Disopyramide pool",
-    fontsize=10,
+    fontsize=15,
     fontweight="bold",
     color=INK_PRI,
     loc="left",
 )
 ax2.yaxis.set_major_formatter(mtick.PercentFormatter())
-ax2.legend(fontsize=11, frameon=False)
+ax2.legend(fontsize=14, frameon=False)
 ax2.set_xlim(0.5, 21.5)
 ax2.set_ylim(0, 105)
 
@@ -440,17 +516,17 @@ for bar, h, med in zip(bars, arch_hazards, arch_medians):
         bar.get_y() + bar.get_height() / 2,
         f"{h:.1%}/mo  |  median TTI {med:.0f} mo",
         va="center",
-        fontsize=10,
+        fontsize=15,
         color=INK_SEC,
     )
 
 ax3.set_yticks(y_pos)
-ax3.set_yticklabels(labels, fontsize=12)
-ax3.set_xlabel("Predicted monthly initiation hazard (%)", fontsize=12, color=INK_SEC)
+ax3.set_yticklabels(labels, fontsize=17)
+ax3.set_xlabel("Predicted monthly initiation hazard (%)", fontsize=17, color=INK_SEC)
 ax3.set_title(
     "Which patients? Predicted hazard by archetype\n"
     f"(study month {ref_month}, median Diso duration {ref_months_diso:.0f} mo)",
-    fontsize=10,
+    fontsize=15,
     fontweight="bold",
     color=INK_PRI,
     loc="left",
@@ -483,25 +559,25 @@ ax4.axvline(
     zorder=3,
 )
 
-ax4.set_xlabel("Predicted monthly hazard (%)", fontsize=12, color=INK_SEC)
-ax4.set_ylabel("Number of remaining patients", fontsize=12, color=INK_SEC)
+ax4.set_xlabel("Predicted monthly hazard (%)", fontsize=17, color=INK_SEC)
+ax4.set_ylabel("Number of remaining patients", fontsize=17, color=INK_SEC)
 ax4.set_title(
     f"Next adopters: risk distribution of {len(last_obs)} remaining patients",
-    fontsize=10,
+    fontsize=15,
     fontweight="bold",
     color=INK_PRI,
     loc="left",
 )
-ax4.legend(fontsize=11, frameon=False)
+ax4.legend(fontsize=16, frameon=False, loc="upper left")
 ax4.xaxis.set_major_formatter(mtick.PercentFormatter())
 
-# Annotation box
+# Annotation box — positioned below the legend area to avoid overlap
 ax4.text(
     0.97,
-    0.95,
+    0.85,
     f"AUC = {auc_pt:.3f}\n95% CI [{auc_lo:.3f}, {auc_hi:.3f}]",
     transform=ax4.transAxes,
-    fontsize=10.5,
+    fontsize=15.5,
     color=INK_SEC,
     va="top",
     ha="right",

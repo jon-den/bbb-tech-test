@@ -31,6 +31,7 @@ from src.task1_adoption.config import (
 from src.task1_adoption.data_loading import load_data
 from src.task1_adoption.dataset import build_dataset
 from src.task1_adoption.evaluation import (
+    bootstrap_test_ci,
     calibration_plot,
     count_calibration,
     count_calibration_plot,
@@ -247,6 +248,29 @@ def main():
         out_dir / "01_model_comparison.csv", index=False
     )
     print(f"\nSaved: {out_dir / '01_model_comparison.csv'}")
+
+    # ── Bootstrap CIs for benchmarking models ──────────────────────
+    print(f"\n{'=' * 70}")
+    print("BOOTSTRAP CIs (500 patient-level resamples, test set)")
+    print(f"{'=' * 70}")
+    bench_models = {
+        f"Refined ({len(refined_available)})": (models["refined"], datasets["refined"][1]),
+        f"GBM benchmark ({len(refined_available)} features)": (
+            models["gbm"],
+            datasets["refined"][1],
+        ),
+        f"Full expanded ({len(expanded_available)})": (models["expanded"], datasets["expanded"][1]),
+    }
+    for label, (mdl, X_te) in bench_models.items():
+        scored = test.copy()
+        scored["pred"] = mdl.predict_proba(X_te)[:, 1]
+        ci = bootstrap_test_ci(scored, n_bootstrap=500, random_state=42)
+        auc_pt, auc_lo, auc_hi = ci["auc"]
+        bss_pt, bss_lo, bss_hi = ci["bss"]
+        print(
+            f"  {label:45s}  AUC {auc_pt:.2f} [{auc_lo:.2f}, {auc_hi:.2f}]"
+            f"  BSS {bss_pt:+.3f} [{bss_lo:+.3f}, {bss_hi:+.3f}]"
+        )
 
     # ── 6. Coefficient tables ───────────────────────────────────────
     hr_col = "HR" if model_cfg.link == "cloglog" else "OR"

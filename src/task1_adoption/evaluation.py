@@ -258,7 +258,9 @@ def bootstrap_test_ci(
     mae_pt = float(np.abs(monthly["observed"] - monthly["predicted"]).mean())
 
     unique_pats = dataset[cols.patient_id].unique()
-    pat_to_rows = dataset.groupby(cols.patient_id).apply(lambda g: g.index.tolist())
+    pat_to_rows = dataset.groupby(cols.patient_id).apply(
+        lambda g: g.index.tolist(), include_groups=False
+    )
 
     boot_aucs, boot_bss, boot_maes = [], [], []
     for _ in range(n_bootstrap):

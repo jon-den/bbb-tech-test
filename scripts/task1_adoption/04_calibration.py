@@ -14,6 +14,7 @@ Output: outputs/task1_adoption/04_calibration.png
 Run:    .venv/bin/python scripts/task1_adoption/04_calibration.py
 """
 
+import json
 import sys
 from pathlib import Path
 
@@ -176,6 +177,38 @@ for _, r in bb_cal.iterrows():
         f"    {r['label']}: obs {r['obs_rate']:.3%}  pred {r['pred_rate']:.3%}  "
         f"(n={r['n']:,}, events={r['obs']})"
     )
+
+# ── 4b. Save structured outputs ──────────────────────────────────────────────
+
+out_dir = Path("outputs/task1_adoption")
+out_dir.mkdir(parents=True, exist_ok=True)
+
+reliability.to_csv(out_dir / "04_reliability.csv", index=False)
+
+mae = float((monthly["pred"] - monthly["obs"]).abs().mean())
+monthly.to_csv(out_dir / "04_monthly_calibration.csv", index=False)
+
+all_sub = pd.concat([ccb_cal, bb_cal], ignore_index=True)
+all_sub.to_csv(out_dir / "04_subgroup_calibration.csv", index=False)
+
+(out_dir / "04_hl_test.json").write_text(
+    json.dumps(
+        {
+            "hl_chi2": round(hl_chi2, 3),
+            "hl_dof": int(hl_dof),
+            "hl_pval": round(hl_pval, 4),
+            "n_bins": N_BINS,
+            "mae_patients_per_month": round(mae, 3),
+            "n_test_events": n_test_events,
+        },
+        indent=2,
+    )
+)
+
+print(f"\nSaved: {out_dir}/04_reliability.csv")
+print(f"Saved: {out_dir}/04_monthly_calibration.csv")
+print(f"Saved: {out_dir}/04_subgroup_calibration.csv")
+print(f"Saved: {out_dir}/04_hl_test.json")
 
 # ── 5. Figure ─────────────────────────────────────────────────────────────────
 

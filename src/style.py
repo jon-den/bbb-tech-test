@@ -5,7 +5,7 @@ from __future__ import annotations
 import matplotlib.pyplot as plt
 
 # ── Palette ───────────────────────────────────────────────────────────────────
-SURFACE = "#fcfcfb"
+SURFACE = "#ffffff"
 GRID = "#e1e0d9"
 INK_PRI = "#0b0b0b"
 INK_SEC = "#52514e"
