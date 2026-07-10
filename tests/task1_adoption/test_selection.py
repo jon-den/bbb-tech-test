@@ -69,8 +69,17 @@ class TestStabilitySelector:
         )
         assert hasattr(sel, "C_used_") and sel.C_used_ > 0
 
-    def test_without_patient_ids(self, person_month_data):
-        """Fallback: subsample rows when patient_ids not provided."""
+    def test_without_patient_ids_raises_when_group_cv(self, person_month_data):
+        """Group-patient CV explicitly requires patient_ids — fit() should raise."""
+        import pytest
+
         X, y, _ = person_month_data
-        sel = StabilitySelector(n_bootstrap=10, random_state=0).fit(X, y)
+        sel = StabilitySelector(n_bootstrap=10, random_state=0)  # default cv_for_C='group_patient'
+        with pytest.raises(ValueError, match="patient_ids"):
+            sel.fit(X, y)
+
+    def test_without_patient_ids_with_random_cv(self, person_month_data):
+        """Random-K CV works without patient_ids — subsamples rows."""
+        X, y, _ = person_month_data
+        sel = StabilitySelector(n_bootstrap=10, random_state=0, cv_for_C="random_5").fit(X, y)
         assert hasattr(sel, "selected_features_")

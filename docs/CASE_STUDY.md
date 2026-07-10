@@ -129,23 +129,23 @@ The archetype panel (bottom left) shows the spread in predicted monthly hazard a
 | Metric | Value | Interpretation |
 |---|---|---|
 | AUC | **0.72** [0.67, 0.78] | Ranks future initiators above non-initiators 72% of the time (null = 0.50). |
-| BSS | **+0.008** | Barely above null. At ~1.5% event rate, per-patient predictive power is inherently limited. |
-| Count MAE | **1.7/month** | Predicted monthly counts track observed within ±2. |
-| Hosmer-Lemeshow | **p = 0.73** | No evidence of miscalibration (p > 0.05 = predicted and observed rates agree across subgroups). |
+| BSS | **+0.009** | Barely above null. At ~1.5% event rate, per-patient predictive power is inherently limited. |
+| Count MAE | **2.3/month** | Predicted monthly counts track observed within ±2. |
+| Hosmer-Lemeshow | **p = 0.21** | No evidence of miscalibration (p > 0.05 = predicted and observed rates agree across subgroups). |
 
 **Model benchmarking.** The GLM is compared against a null baseline and a gradient-boosted survival model (Cox partial likelihood loss, scikit-survival):
 
 | Model | AUC | BSS |
 |---|---:|---:|
 | Null (marginal rate) | 0.50 | −0.001 |
-| **Refined GLM (cloglog, 4 features)** | **0.72** | **+0.008** |
+| **Refined GLM (cloglog, 4 features)** | **0.72** | **+0.009** |
 | GBM (Cox PH, same features) | 0.65 | +0.001 |
 | Full feature set GLM | 0.67 | −0.001 |
 
 The refined GLM outperforms both the nonlinear GBM and the full feature set GLM on both metrics. The small event count (~91) is the limitation for model complexity, and the pre-filter + stability step is what helps to create a simple but robust model.
 
 ### Conclusion
-At the individual patient-month level, Camzyos initiation is rare (~1.5%) and hard to predict from claims data alone since the clinical variables (LVOT gradient, NYHA class) that might drive prescription decisions are invisible. The BSS of +0.008 reflects this: the model barely beats the base rate on per-patient predictive power. However, the model reliably separates high- from low-risk patients (AUC 0.72) and identifies a subset with substantially elevated initiation risk — the escalated-off-meds profile has a median time-to-initiation of ~26 months versus effectively never for unescalated patients. This enables profile-based targeting even when individual-month probabilities remain uncertain; aggregate monthly predictions also track observed counts within MAE 1.7/month.
+At the individual patient-month level, Camzyos initiation is rare (~1.5%) and hard to predict from claims data alone since the clinical variables (LVOT gradient, NYHA class) that might drive prescription decisions are invisible. The BSS of +0.009 reflects this: the model barely beats the base rate on per-patient predictive power. However, the model reliably separates high- from low-risk patients (AUC 0.72) and identifies a subset with substantially elevated initiation risk — the escalated-off-meds profile has a median time-to-initiation of ~26 months versus effectively never for unescalated patients. This enables profile-based targeting even when individual-month probabilities remain uncertain; aggregate monthly predictions also track observed counts within MAE 2.3/month.
 
 ---
 

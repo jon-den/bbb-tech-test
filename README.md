@@ -2,9 +2,9 @@
 
 Analysis of Camzyos (mavacamten) adoption in US commercial claims data (~30k cardiac patients, 2020–2023). Three tasks:
 
-1. **Adoption modelling** — discrete-time hazard model of Camzyos initiation
-2. **TAM estimation** — PyMC Bayesian model of the US addressable pool (literature priors × claims data)
-3. **Agentic AI pitch** — 10-minute pitch on building an agentic investment system
+1. **Adoption modelling** — discrete-time hazard model of Camzyos initiation (Task 1)
+2. **TAM estimation** — top-down epidemiological funnel with Monte Carlo propagation (Task 2)
+3. **Agentic AI pitch** — 10-minute pitch on building an agentic investment system (Task 3)
 
 ## For reviewers — start here
 
@@ -31,7 +31,9 @@ unzip -o synthetic_data.zip
 
 ## Running the analysis
 
-**Task 1 — adoption model.** Scripts are numbered in the order they should be run; each is self-contained and reads directly from `synthetic_data/`.
+Every script is self-contained and reads directly from `synthetic_data/`.
+
+**Task 1 — adoption model.** Scripts are numbered in the order they should be run.
 
 ```bash
 .venv/bin/python scripts/task1_adoption/01_adoption_model.py     # main pipeline + benchmarks
@@ -41,11 +43,13 @@ unzip -o synthetic_data.zip
 .venv/bin/python scripts/task1_adoption/05_hr_forest_plot.py     # hazard ratio forest plot (case study)
 ```
 
-**Task 2 — TAM PyMC model.**
+**Task 2 — top-down TAM funnel.** Single script; asserts every rounded-k value in the case study.
 
 ```bash
-.venv/bin/python scripts/task2_tam/01_tam_model.py
+.venv/bin/python scripts/task2_tam/02_top_down_funnel.py
 ```
+
+The script runs the Monte Carlo, saves three CSVs and one PNG to `outputs/task2_tam/`, and then runs 17 hard-coded sanity checks against the rounded-k values in `docs/CASE_STUDY.md`. Any drift between code and doc fails the script with an `AssertionError`.
 
 **Tests.**
 
@@ -65,7 +69,7 @@ Prerequisites:
 - `pandoc ≥ 3.0` — `brew install pandoc`
 - Google Chrome at the default macOS install path (`/Applications/Google Chrome.app`)
 
-Output: `docs/CASE_STUDY.pdf` (~800–900 KB). If you see a ~500 KB sans-serif file, the wrong tool was used — rerun via `scripts/build_pdf.sh`. Two CSS quirks are load-bearing (documented inline in [scripts/build_pdf.sh](scripts/build_pdf.sh)).
+Output: `docs/CASE_STUDY.pdf` (~800 KB). If you see a ~500 KB sans-serif file, the wrong tool was used — rerun via `scripts/build_pdf.sh`. Two CSS quirks are load-bearing (documented inline in [scripts/build_pdf.sh](scripts/build_pdf.sh)).
 
 ## Repository layout
 
@@ -78,13 +82,14 @@ src/
     models.py              — DiscreteHazardGLM, GBMHazardBenchmark, MarginalRateModel
     evaluation.py          — Brier decomposition, time-dependent AUC, calibration
     selection.py           — StabilitySelector (bootstrap + L1)
-  task2_tam/               — Task 2 modules
-    tam_model.py           — PyMC joint Bayesian model (p_true × s_capture × N_hcm)
-    claims_evidence.py     — Beta-Binomial evidence from the ~30k cohort
+  task2_tam/
+    top_down.py            — FunnelParams, MC over triangular priors, plot helpers
 
 scripts/
   task1_adoption/          — Numbered Task 1 pipeline scripts (01–05)
-  task2_tam/               — Task 2 pipeline (01_tam_model.py)
+    experiments_feature_selection.py  — Sensitivity of the stability-selection matrix
+  task2_tam/
+    02_top_down_funnel.py  — Driver + 17 sanity-check assertions against docs/CASE_STUDY.md
   build_pdf.sh             — Build docs/CASE_STUDY.pdf (pandoc + Chrome headless)
 
 outputs/
@@ -103,17 +108,18 @@ docs/
   references.bib           — BibTeX used by the PDF build
 
 synthetic_data/            — Input CSVs (patients, diagnoses, procedures, prescriptions, enrollment)
-references/                — External PDFs cited in the write-up (e.g. Camzyos FDA label)
 ```
 
 ## Headline results
 
-**Task 1 — adoption model.** 6-feature discrete-time hazard GLM on 775 Disopyramide-experienced patients (146 initiators). Test-set time-dependent AUC 0.72 (95% CI [0.67, 0.78] from patient-level test bootstrap), count calibration MAE 1.7 patients/month. Treatment-escalation history (`ccb_ever` HR 4.69, p<0.01) dominates; demographics and symptom-burden codes not predictive. See [CASE_STUDY.md § Task 1](docs/CASE_STUDY.md).
+**Task 1 — adoption model.** 4-feature discrete-time hazard GLM on 775 Disopyramide-experienced patients (146 initiators). Test-set time-dependent AUC **0.72** (95% CI [0.67, 0.78]), count calibration MAE **2.3 patients/month**, Hosmer–Lemeshow p = 0.21. Treatment-escalation history (`ccb_ever` HR **5.40**, 95% CI 2.64–11.06, p < 0.001) dominates; demographics and symptom-burden codes are not predictive. See [CASE_STUDY.md § Task 1](docs/CASE_STUDY.md).
 
-**Task 2 — TAM.** Joint PyMC Bayesian model reconciles literature (~30% of diagnosed HCM adults are Camzyos-eligible, Desai 2022) with the claims cohort (~4% look treatable using the Task 1 escalation markers) via a claims-capture-rate parameter.
-- **US addressable market** — posterior median **~118,000 patients**, 80% CI **74k–192k**
-- **True clinical eligibility `p`** — 30% (22–39%)
-- **Claims capture rate `s`** — 14% (10–18%) — our billing data sees roughly 1 in 7 truly eligible patients; the direct Task 3 hand-off
-- Top sensitivity lever: diagnosed HCM count `N` (halving `N` roughly halves the TAM)
+**Task 2 — top-down TAM.** `TAM = US adults × diagnosed HCM prevalence × Camzyos-eligible fraction`, each factor a triangular distribution over directly-cited published bounds with Monte Carlo propagation.
+
+- **US addressable market, 2026** — MC median **~127k patients**, 80% CI **~84k – 195k**
+- **2030 outlook** — anchored at the MC median and projected under 2%/4.7%/7.4%/yr growth: **~137k – 169k**, base case **~152k**
+- **Prevalence anchors** — Husser 2018 (Germany 2015, 70/100k floor), Butzner 2021 (US 2019, 80/100k mode), Massera 2023 (imaging-phenotype ceiling, 200/100k)
+- **Eligibility anchors** — Schultze 2022 / Batzner 2019 (obstructive share ~half-to-two-thirds) × Butzner 2026 / Wang 2023 / Charron 2026 (NYHA II-III symptomatic share)
+- Every headline number is script-asserted (17 checks) against [`docs/CASE_STUDY.md`](docs/CASE_STUDY.md)
 
 See [CASE_STUDY.md § Task 2](docs/CASE_STUDY.md) and [outputs/task2_tam/](outputs/task2_tam/).

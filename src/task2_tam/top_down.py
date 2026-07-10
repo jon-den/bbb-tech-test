@@ -79,23 +79,6 @@ class FunnelParams:
     target_years: tuple[int, ...] = (2026, 2028, 2030)
 
 
-def prevalence_at_year(year: int, growth: float, p: FunnelParams) -> float:
-    """Diagnosed prevalence per 100k, projected from the 2026 mode at `growth`.
-
-    Used only for the over-time table (post-2026 projection). The 2026 baseline
-    is the source-anchored mode; growth applies from `anchor_year` (2026) forward.
-
-    Args:
-        year: target year.
-        growth: annual growth rate (e.g. 0.047 for 4.7%/yr).
-        p: funnel parameters.
-
-    Returns:
-        Prevalence per 100k population.
-    """
-    return p.prev_mode * (1 + growth) ** (year - p.anchor_year)
-
-
 def prevalence_triangle_2026(p: FunnelParams) -> tuple[float, float, float]:
     """2026 prevalence triangle (per 100k) as (min, mode, max).
 

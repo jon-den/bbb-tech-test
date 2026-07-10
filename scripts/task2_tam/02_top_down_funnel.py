@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 """Task 2 — Top-down epidemiological funnel for US Camzyos TAM.
 
-Reproduces every number in `docs/TASK_TOP_DOWN.md`. Complements the primary
-Bayesian estimate in `scripts/task2_tam/01_tam_model.py`.
+Reproduces every number in the Task 2 section of `docs/CASE_STUDY.md`.
+Emits three CSVs, one PNG, and 17 hard-asserted sanity checks against the
+rounded-k values in the case study.
 
 Outputs (all in outputs/task2_tam/):
     02_top_down_tam_2026.csv    — headline MC TAM distribution (p10, p50, p90, mean)
     02_top_down_scenarios.csv   — Bear / Base / Bull deterministic point estimates
-    02_top_down_over_time.csv   — TAM under 2%/4%/7.4% growth scenarios, 2026/28/30
+    02_top_down_over_time.csv   — TAM at 2028/2030 under 2%/4.7%/7.4% growth from MC median
+    02_top_down_tam_2026.png    — MC distribution histogram with median + mode-product markers
 
 Run: .venv/bin/python scripts/task2_tam/02_top_down_funnel.py
 """
@@ -42,7 +44,7 @@ def _pct(x: np.ndarray, q: float) -> float:
 
 
 def _k(x: float) -> int:
-    """Round to nearest thousand — the reporting unit used in docs/TASK_TOP_DOWN.md."""
+    """Round to nearest thousand — the reporting unit used in docs/CASE_STUDY.md."""
     return int(round(x / 1000))
 
 
@@ -163,10 +165,10 @@ for path in [
     print(f"   → {path}")
 
 
-# ── 9. Sanity checks against docs/TASK_TOP_DOWN.md ───────────────────────────
+# ── 9. Sanity checks against docs/CASE_STUDY.md ───────────────────────────
 # Every doc number is rounded to the nearest 1,000 and reported in "k".
 # These checks demand EXACT match on rounded-k values (no tolerance).
-print("\n8. Sanity checks against docs/TASK_TOP_DOWN.md (exact rounded-k match):")
+print("\n8. Sanity checks against docs/CASE_STUDY.md (exact rounded-k match):")
 
 
 def _check_k(name: str, actual: float, expected_k: int) -> None:
