@@ -15,7 +15,7 @@ link-citations: true
 
 ---
 
-## Bottom line
+## Summary
 
 **Task 1.** Treatment escalation history is the strongest predictor of Camzyos initiation in claims data (AUC 0.72). The dominant signal is whether a patient has *already tried and moved past* first-line therapy (ccb_ever HR 5.40, p < 0.001; 4-feature model), not age, sex, or symptom-burden billing codes. However, it cannot be ruled out that clinical severity (LVOT gradient, NYHA class), invisible in billing data, is the true underlying driver.
 
@@ -105,7 +105,7 @@ The final model contains the set of features passing the 0.60 threshold: **`ccb_
 
 #### Hazard ratios: which features predict initiation?
 
-![Hazard ratio forest plot](../outputs/task1_adoption/05_hr_forest_plot.png)
+![Figure: Hazard ratio forest plot](../outputs/task1_adoption/05_hr_forest_plot.png)
 
 The forest plot shows the HR and 95% CI for each of the four refined features. An HR > 1 means the feature increases the monthly probability of Camzyos initiation; HR < 1 means it decreases it. The reference line at HR = 1 represents no effect.
 
@@ -120,7 +120,7 @@ Median time-to-initiation: ~26 months for the escalated-off-meds archetype vs. e
 
 **Figure: Adoption dynamics (four-panel summary)**
 
-![Adoption dynamics — Task 1](../outputs/task1_adoption/03_adoption_figure.png)
+![Figure: Adoption dynamics](../outputs/task1_adoption/03_adoption_figure.png)
 
 Monthly new starts averaged ~10/month through late 2022 (with a Dec 2022 spike to 18) and decelerated to ~6/month in H2 2023.. Cumulative penetration is modelled as an S-curve (logistic growth), a commonly used framework for specialty drug adoption [TODO add reference]: slow initial uptake, then deceleration as the eligible pool saturates. The 21-month observation window captures only the early phase of this trajectory. By study end, 146/775 = 18.8% of the Disopyramide-conditioned pool had initiated Camzyos.
 
@@ -141,13 +141,12 @@ The archetype panel (bottom left) shows the spread in predicted monthly hazard a
 
 :::
 
-**Model benchmarking.** The GLM is compared against a null baseline and a gradient-boosted survival model (Cox partial likelihood loss, scikit-survival):
+**Model benchmarking.** The GLM is compared against a null baseline (AUC: 0.50, BSS: −0.001) and a gradient-boosted survival model (Cox partial likelihood loss, scikit-survival):
 
 ::: {.model-bench}
 
 | Model | AUC | BSS |
 |---|---:|---:|
-| Null (marginal rate) | 0.50 | −0.001 |
 | **Refined GLM (cloglog, 4 features)** | **0.72** | **+0.009** |
 | GBM (Cox PH, same features) | 0.65 | +0.001 |
 | Full feature set GLM | 0.67 | −0.001 |
@@ -185,32 +184,31 @@ Triangular distributions are the standard choice when only min/mode/max are know
 
 ### Data, assumptions, and parameters
 
-**US adults (2026).** Fixed at **264M** (US Census 2026 projection). 
+**Funnel inputs.** Three directly cited sources per parameter; no growth adjustment applied to the 2026 baseline — temporal and geographic variation is captured by the triangle width.
 
-**Diagnosed HCM prevalence, per 100k — triangle `(min=70, mode=80, max=200)`.** Three directly cited sources anchor the 2026 range; no growth adjustment applied — temporal and geographic variation is captured by the triangle width:
+::: {.funnel-inputs}
 
-- **Min = 70/100k** — Husser 2018 [@husser2018]: clinically diagnosed HCM in Germany, 2015 (0.07% = 1/1,372 patients in a ~5M-patient claims analysis).
-- **Mode = 80/100k** — Butzner 2021 [@butzner2021]: diagnosed HCM in US commercial claims (HealthCore HIRD), 2019.
-- **Max = 200/100k** — Massera 2023 [@massera2023]: imaging-phenotype ceiling (~1:500), i.e. the biological cap reached only if clinical underdiagnosis were fully eliminated.
+| Parameter | Min | Mode | Max | Source | Rationale |
+|---|---:|---:|---:|---|---|
+| **US adults (2026)** | — | **264M** | — | US Census | Fixed; ~0.5% uncertainty negligible vs other inputs |
+| **HCM prevalence (/100k)** | **70** | **80** | **200** | [@husser2018] / [@butzner2021] / [@massera2023] | Germany '15 claims (0.07% = 1/1,372) / US '19 HIRD / imaging-phenotype ceiling (~1:500, biological cap if underdiagnosis fully eliminated) |
+| *Intermediate: obstructive share* | 0.49 | 0.60 | 0.70 | [@schultze2022] / [@batzner2019] | UK/Germany pop. estimates (68% UK, 49% DE) / review (~70%). Mode = midpoint of "half-to-two-thirds" range |
+| *Intermediate: NYHA II-III share* | 0.45 | 0.74 | 0.92 | [@butzner2026] / [@wang2023] / [@charron2026] | Claims 53/117 (imperfect ICD sensitivity, includes some NYHA IV) / US HCP cohort II+III = 74.2% (excl. I 20%, IV 5.7%) / France registry II+III = 92% (excl. IV 4%) |
+| **= Camzyos-eligible fraction** | **0.22** | **0.44** | **0.64** | — | Product of above two: `0.49 × 0.45` / `0.60 × 0.74` / `0.70 × 0.92` |
 
-Growth rate is applied only for the over-time projection (2026 → 2028/2030), not to the 2026 baseline.
+:::
 
-**Camzyos-eligible fraction — triangle `(22%, 44%, 64%)`.** Camzyos's label is obstructive HCM at NYHA class II-III specifically (NYHA I asymptomatic and NYHA IV severe excluded), on maximally tolerated first-line therapy (beta-blocker, CCB, or disopyramide). The eligible fraction of diagnosed HCM is built as the product of:
+**Growth scenarios.** `prev(year) = 80/100k × (1 + g)^(year − 2026)`, applied from the 2026 mode prevalence forward only. Two measured US-claims studies bracket the range; the mode is the midpoint of the two:
 
-- **Obstructive share of HCM — triangle `(0.49, 0.60, 0.70)`.** Obstructive HCM makes up roughly half to two-thirds of diagnosed HCM. Schultze 2022 [@schultze2022] (UK/Germany population estimates): 68% UK, 49% Germany. Batzner 2019 [@batzner2019] (review, *Dtsch Arztebl Int*): ~70% of HCM patients have the obstructive type. Bounds = 0.49 (Schultze Germany) and 0.70 (Batzner review); mode = 0.60 as the midpoint of the "half-to-two-thirds" range.
+::: {.growth-scenarios}
 
-- **Symptomatic NYHA II-III share of oHCM — triangle `(0.45, 0.74, 0.92)`.** Restricted to NYHA II-III per the label; NYHA IV explicitly excluded. Three directly measured sources spanning claims-based to registry-observed:
-    - **Min = 0.45** (Butzner 2026 [@butzner2026]): claims-based symptomatic-oHCM fraction (53/117). Lower bound reflecting imperfect ICD symptom-code sensitivity; claims can't reliably filter by NYHA class, so this includes some NYHA IV.
-    - **Mode = 0.74** (Wang 2023 [@wang2023]): US HCP cohort (n=754 oHCM patients) — NYHA II + III = 44.0% + 30.2% = 74.2% (excluding NYHA I at 20.0% and NYHA IV at 5.7%).
-    - **Max = 0.92** (Charron 2026 [@charron2026]): France nationwide oHCM registry — NYHA II + III = 32% + 60% = 92% (excluding NYHA IV at 4%).
+| Scenario | Rate | Source | Rationale |
+|---|---:|---|---|
+| Floor | 2%/yr | [@butzner2026] | Measured HCM incidence 2017→2023 (~1.9%/yr). Post-ICD-10-catch-up pace |
+| **Base** | **4.7%/yr** | — | Midpoint of the two measured rates; no editorial adjustment |
+| Ceiling | 7.4%/yr | [@butzner2021] | Measured HCM prevalence 2013→2019 (7.44%/yr). ICD-10-era diagnostic catch-up, unlikely to persist |
 
-Multiplying: **Min = 22%** = `0.49 × 0.45` (exact 0.2205); **Mode = 44%** = `0.60 × 0.74`; **Max = 64%** = `0.70 × 0.92` (exact 0.644).
-
-**Growth over time.** `prev(year) = 80/100k × (1 + g)^(year − 2026)`, extrapolating from the 2026 mode prevalence at three scenario growth rates. Two measured US-claims studies bracket the range; the mode is the midpoint of the two:
-
-- **2%/yr — floor.** Butzner 2026 [@butzner2026] measured an annualised rate of ~1.9%/yr (i.e., post ICD-10 transition era).
-- **4.7%/yr — base.** Midpoint of the two measured rates.
-- **7.4%/yr — ceiling.** Butzner 2021 [@butzner2021] measured HCM prevalence growth at an annualised rate of 7.44%/yr. Reflects the ICD-10-transition era diagnostic catch-up.
+:::
 
 ### Results
 
@@ -218,8 +216,10 @@ Multiplying: **Min = 22%** = `0.49 × 0.45` (exact 0.2205); **Mode = 44%** = `0.
 
 MC median **~127k patients**, 80% CI **~84k – 195k**. The distribution is right-skewed because the prevalence max (200/100k) sits well above its mode (80/100k), which pulls the MC median above the deterministic mode-product (~94k, shown for reference as the blue dotted line).
 
-![Monte Carlo distribution of 2026 TAM (n=10,000 draws)](../outputs/task2_tam/02_top_down_tam_2026.png)
+![Figure: Monte Carlo distribution of 2026 TAM (n=10,000 draws)](../outputs/task2_tam/02_top_down_tam_2026.png)
 **Outlook (2026 → 2030).** Anchored at the MC median (127k), three growth scenarios from 2026 forward:
+
+::: {.outlook-table}
 
 | Scenario | Rate | 2028 | 2030 |
 |---|---|---:|---:|
@@ -227,21 +227,29 @@ MC median **~127k patients**, 80% CI **~84k – 195k**. The distribution is righ
 | **Base — midpoint of measured rates** | **4.7%/yr** | **~139k** | **~152k** |
 | Ceiling | 7.4%/yr | ~146k | ~169k |
 
+:::
+
 **Note** This is a projection of the eligible pool, not a Camzyos-on-drug forecast. The latter is a diffusion question (peak penetration, ramp shape,  label extension) and needs more data.
 
 ---
 
 ## Limitations
 
+**Task 1**
+
 - **Synthetic data artefact.** The 98.8% Disopyramide→Camzyos co-occurrence seems very high; conversion rates and archetype hazards could shift with real data.
 - **Small sample size.** ~91 training events limit feature count. The nonlinear GBM benchmark did not improve discrimination, suggesting the linear model captures the available signal.
 - **Claims data only — no clinical detail.** LVOT gradient, NYHA class, echocardiographic findings, i.e., the variables that actually drive prescribing decisions, are absent from billing data. EHR linkage (IQVIA EHR Linked, TriNetX, Truveta) could unlock them.
-- **Task 1 panel selection is opaque.** The DATA_README says "US commercial claims" but leaves the selection criteria unspecified, whether Medicare/Medicaid is included is unknown and hence its generalisability as well.
-- **Prevalence triangle spans international + temporal sources (Task 2).** The 2026 prevalence range (70–200/100k) combines [@husser2018] (Germany 2015), [@butzner2021] (US 2019), and [@massera2023] (imaging ceiling). No US-2026 point-prevalence measurement exists; the triangle captures this via width. Future projection (2026→2030) uses growth scenarios 2–7.4%/yr, bracketed by [@butzner2026] (measured incidence trend) and [@butzner2021] (ICD-10-era historical rate).
-- **Adult-only, current-label denominator (Task 2).** SCOUT-HCM (adolescents 12 to <18) is a live label-expansion catalyst adding patients outside this denominator. Non-obstructive HCM is closed: trial ODYSSEY-HCM missed both co-primary endpoints in April 2025.
-- **Independence assumption (Task 2 MC).** Prevalence and eligibility are drawn independently; Camzyos-driven awareness may couple them, likely making the CI slightly too tight.
+- **Data selection is opaque.** The DATA_README says "US commercial claims" but leaves the selection criteria unspecified, whether Medicare/Medicaid is included is unknown and hence its generalisability as well.
+
+**Task 2**
+- **Prevalence triangle spans international + temporal sources.** The 2026 prevalence range (70–200/100k) combines [@husser2018] (Germany 2015), [@butzner2021] (US 2019), and [@massera2023] (imaging ceiling). No US-2026 point-prevalence measurement exists; the triangle captures this via width. Future projection (2026→2030) uses growth scenarios 2–7.4%/yr, bracketed by [@butzner2026] (measured incidence trend) and [@butzner2021] (ICD-10-era historical rate).
+- **Adult-only, current-label denominator.** SCOUT-HCM (adolescents 12 to <18) is a live label-expansion catalyst adding patients outside this denominator. Non-obstructive HCM is closed: trial ODYSSEY-HCM missed both co-primary endpoints in April 2025.
+- **Independence assumption.** Prevalence and eligibility are drawn independently; Camzyos-driven awareness may couple them, likely making the CI slightly too tight.
 
 ## What I would change with more time or data
+
+**Task 2 — more data, more modelling:**
 
 - **Replace synthetic data with full claims data, such as MarketScan.** Collapses the 98.8% Disopyramide artefact, gives 500–2,000 Camzyos initiators (10× current sample), enables subgroup/sensitvity analyses.
 - **Broader feature engineering.** With a larger sample, interaction terms (e.g., `ccb_ever × mri_ever`), time-varying coefficients, richer comorbidity features, and provider-level variables could be explored. With EHR-linked data, clinical/laboratory derived features could be derived. At n=91 events, each additional feature degrades calibration.

@@ -9,6 +9,17 @@ from sklearn.model_selection import GroupKFold, KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import resample
 
+from src.style import (
+    C_OBS,
+    C_THRESHOLD,
+    GRID,
+    INK_MUT,
+    INK_PRI,
+    INK_SEC,
+    highlight_colors,
+    style_ax,
+)
+
 
 class StabilitySelector(BaseEstimator, TransformerMixin):
     """Stability selection via bootstrap + L1-penalised logistic regression.
@@ -189,24 +200,36 @@ class StabilitySelector(BaseEstimator, TransformerMixin):
         if ax is None:
             _, ax = plt.subplots(figsize=figsize)
         probs = self.selection_probabilities_.sort_values(ascending=True)
-        colors = ["C0" if p >= self.threshold else "C7" for p in probs]
-        ax.barh(range(len(probs)), probs.values, color=colors, edgecolor="white")
+        colors = [C_OBS if p >= self.threshold else INK_MUT for p in probs]
+        ax.barh(
+            range(len(probs)), probs.values, color=colors, height=0.65, edgecolor="none", zorder=2
+        )
         ax.set_yticks(range(len(probs)))
-        ax.set_yticklabels(probs.index)
+        ax.set_yticklabels(probs.index, fontsize=8.5, color=INK_PRI)
         ax.axvline(
             self.threshold,
-            color="red",
+            color=C_THRESHOLD,
             linestyle="--",
-            alpha=0.6,
+            linewidth=1.2,
+            zorder=3,
             label=f"Threshold ({self.threshold})",
         )
-        ax.set_xlabel("Selection probability")
-        ax.set_title(f"Stability selection ({self.n_bootstrap} bootstrap resamples)")
-        ax.legend()
+        ax.set_xlabel("Selection probability", fontsize=9, color=INK_SEC)
+        ax.set_title(
+            f"Stability selection ({self.n_bootstrap} bootstrap resamples)",
+            fontsize=10,
+            fontweight="bold",
+            color=INK_PRI,
+            loc="left",
+        )
+        ax.legend(fontsize=8, frameon=False)
+        style_ax(ax, hide_top_right=True, grid_axis="x")
+        ax.grid(axis="y", visible=False)
+        ax.set_xlim(0, 1.05)
         return ax
 
 
-def lasso_path_plot(X, y, Cs=None, ax=None, figsize=(10, 6)):
+def lasso_path_plot(X, y, Cs=None, ax=None, figsize=(10, 6), highlight_features=None):
     """Plot LASSO regularisation path: coefficients vs penalty strength.
 
     Args:
@@ -216,6 +239,9 @@ def lasso_path_plot(X, y, Cs=None, ax=None, figsize=(10, 6)):
             30 log-spaced values from 1e-3 to 1e2.
         ax (plt.Axes | None): Axes to draw on; created if None.
         figsize (tuple[int, int]): Figure size when ax is None.
+        highlight_features (list[str] | None): Feature names to draw in colour
+            and add to the legend. All other features are drawn in muted grey.
+            When None, all features are drawn with distinct colours.
 
     Returns:
         plt.Axes: Axes with one line per feature showing coefficient vs C.
@@ -225,24 +251,49 @@ def lasso_path_plot(X, y, Cs=None, ax=None, figsize=(10, 6)):
 
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
-    feature_names = X.columns if hasattr(X, "columns") else [f"f{i}" for i in range(X.shape[1])]
+    feature_names = list(
+        X.columns if hasattr(X, "columns") else [f"f{i}" for i in range(X.shape[1])]
+    )
 
     coefs = []
     for C in Cs:
         model = LogisticRegression(penalty="l1", C=C, solver="saga", max_iter=5000, random_state=42)
         model.fit(X_scaled, y)
         coefs.append(model.coef_[0])
-
     coefs = np.array(coefs)
 
     if ax is None:
         _, ax = plt.subplots(figsize=figsize)
-    for i, name in enumerate(feature_names):
-        ax.plot(Cs, coefs[:, i], label=name)
+
+    highlight_set = set(highlight_features) if highlight_features else None
+
+    if highlight_set:
+        # Draw background (unselected) lines first — thin, muted
+        for i, name in enumerate(feature_names):
+            if name not in highlight_set:
+                ax.plot(Cs, coefs[:, i], color=INK_MUT, linewidth=0.6, alpha=0.2, zorder=1)
+        # Draw highlighted lines on top with distinct colours
+        hi_names = [n for n in feature_names if n in highlight_set]
+        hi_colours = highlight_colors(len(hi_names))
+        for colour, name in zip(hi_colours, hi_names):
+            i = feature_names.index(name)
+            ax.plot(Cs, coefs[:, i], color=colour, linewidth=2.0, zorder=3, label=name)
+        ax.legend(fontsize=8, frameon=False, loc="upper left")
+    else:
+        for i, name in enumerate(feature_names):
+            ax.plot(Cs, coefs[:, i], label=name)
+        ax.legend(bbox_to_anchor=(1.02, 1), loc="upper left", fontsize=7)
+
+    ax.axhline(0, color=GRID, linewidth=0.8, zorder=0)
     ax.set_xscale("log")
-    ax.set_xlabel("C (inverse regularisation strength →)")
-    ax.set_ylabel("Coefficient")
-    ax.set_title("LASSO regularisation path")
-    ax.legend(bbox_to_anchor=(1.02, 1), loc="upper left", fontsize=8)
-    ax.axhline(0, color="grey", linewidth=0.5)
+    ax.set_xlabel("C (inverse regularisation strength →)", fontsize=9, color=INK_SEC)
+    ax.set_ylabel("Coefficient", fontsize=9, color=INK_SEC)
+    ax.set_title(
+        "LASSO regularisation path",
+        fontsize=10,
+        fontweight="bold",
+        color=INK_PRI,
+        loc="left",
+    )
+    style_ax(ax, hide_top_right=True, grid_axis="both")
     return ax

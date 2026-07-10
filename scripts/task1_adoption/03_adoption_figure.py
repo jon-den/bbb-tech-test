@@ -24,6 +24,18 @@ import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 
+from src.style import (
+    C_ARCH,
+    C_OBS,
+    C_PRED,
+    C_SPLIT,
+    GRID,
+    INK_MUT,
+    INK_PRI,
+    INK_SEC,
+    SURFACE,
+    style_ax,
+)
 from src.task1_adoption.config import (
     LAUNCH_MONTH,
     MONTH_COL,
@@ -37,18 +49,6 @@ from src.task1_adoption.evaluation import brier_decomposition, time_dependent_au
 from src.task1_adoption.models import DiscreteHazardGLM
 
 np.random.seed(42)
-
-# ── Dataviz palette (reference palette, light mode) ──────────────────────────
-C_OBS = "#2a78d6"  # slot 1 blue   — observed
-C_PRED = "#1baf7a"  # slot 2 aqua   — model predicted
-C_SPLIT = "#898781"  # muted ink     — train/test divider
-SURFACE = "#fcfcfb"
-GRID = "#e1e0d9"
-INK_PRI = "#0b0b0b"
-INK_SEC = "#52514e"
-INK_MUT = "#898781"
-# Blue ordinal ramp (steps 250→600) for 4 archetypes ordered low→high risk
-C_ARCH = ["#86b6ef", "#5598e7", "#2a78d6", "#104281"]
 
 N_BOOTSTRAP = 500
 
@@ -310,10 +310,10 @@ print(top10.to_string(index=False))
 
 # ── 7. Figure ─────────────────────────────────────────────────────────────────
 
-fig, axes = plt.subplots(2, 2, figsize=(14, 10), facecolor=SURFACE)
+fig, axes = plt.subplots(2, 2, figsize=(16, 11), facecolor=SURFACE)
 fig.suptitle(
-    "Camzyos Adoption — Task 1 Answer",
-    fontsize=14,
+    "Camzyos Adoption Dynamics",
+    fontsize=13,
     fontweight="bold",
     color=INK_PRI,
     x=0.02,
@@ -321,11 +321,8 @@ fig.suptitle(
 )
 
 for ax in axes.flat:
-    ax.set_facecolor(SURFACE)
-    for spine in ax.spines.values():
-        spine.set_color(GRID)
-    ax.tick_params(colors=INK_MUT, labelsize=9)
-    ax.grid(axis="y", color=GRID, linewidth=0.7, zorder=0)
+    style_ax(ax, hide_top_right=True, grid_axis="y")
+    ax.tick_params(labelsize=10)
 
 # ── Panel 1: Monthly adoption (training + test) ──────────────────────────────
 ax1 = axes[0, 0]
@@ -378,12 +375,12 @@ ax1.text(
     ax1.get_ylim()[1] if ax1.get_ylim()[1] > 0 else 10,
     "test →",
     color=C_SPLIT,
-    fontsize=8,
+    fontsize=9,
     va="top",
 )
 
-ax1.set_xlabel("Study month (1 = Apr 2022)", fontsize=9, color=INK_SEC)
-ax1.set_ylabel("New Camzyos initiations", fontsize=9, color=INK_SEC)
+ax1.set_xlabel("Study month (1 = Apr 2022)", fontsize=11, color=INK_SEC)
+ax1.set_ylabel("New Camzyos initiations", fontsize=11, color=INK_SEC)
 ax1.set_title(
     "Monthly new patients — observed vs predicted",
     fontsize=10,
@@ -391,7 +388,7 @@ ax1.set_title(
     color=INK_PRI,
     loc="left",
 )
-ax1.legend(fontsize=8, frameon=False)
+ax1.legend(fontsize=10, frameon=False)
 ax1.set_xlim(0.5, 21.5)
 
 # ── Panel 2: Cumulative S-curve ───────────────────────────────────────────────
@@ -424,13 +421,13 @@ ax2.text(
     months[-1] + 0.3,
     cum_all.iloc[-1] / pool_size * 100,
     f"{int(cum_all.iloc[-1])}/{pool_size}\n({cum_all.iloc[-1] / pool_size:.0%})",
-    fontsize=8,
+    fontsize=9,
     color=C_OBS,
     va="center",
 )
 
-ax2.set_xlabel("Study month", fontsize=9, color=INK_SEC)
-ax2.set_ylabel("Cumulative initiations (% of at-risk pool)", fontsize=9, color=INK_SEC)
+ax2.set_xlabel("Study month", fontsize=11, color=INK_SEC)
+ax2.set_ylabel("Cumulative initiations (% of at-risk pool)", fontsize=11, color=INK_SEC)
 ax2.set_title(
     "S-curve: cumulative penetration of Disopyramide pool",
     fontsize=10,
@@ -439,7 +436,7 @@ ax2.set_title(
     loc="left",
 )
 ax2.yaxis.set_major_formatter(mtick.PercentFormatter())
-ax2.legend(fontsize=8, frameon=False)
+ax2.legend(fontsize=10, frameon=False)
 ax2.set_xlim(0.5, 21.5)
 ax2.set_ylim(0, 105)
 
@@ -456,13 +453,13 @@ for bar, h, med in zip(bars, arch_hazards, arch_medians):
         bar.get_y() + bar.get_height() / 2,
         f"{h:.1%}/mo  |  median TTI {med:.0f} mo",
         va="center",
-        fontsize=8,
+        fontsize=9,
         color=INK_SEC,
     )
 
 ax3.set_yticks(y_pos)
-ax3.set_yticklabels(labels, fontsize=9)
-ax3.set_xlabel("Predicted monthly initiation hazard (%)", fontsize=9, color=INK_SEC)
+ax3.set_yticklabels(labels, fontsize=11)
+ax3.set_xlabel("Predicted monthly initiation hazard (%)", fontsize=11, color=INK_SEC)
 ax3.set_title(
     "Which patients? Predicted hazard by archetype\n"
     f"(study month {ref_month}, median Diso duration {ref_months_diso:.0f} mo)",
@@ -499,8 +496,8 @@ ax4.axvline(
     zorder=3,
 )
 
-ax4.set_xlabel("Predicted monthly hazard (%)", fontsize=9, color=INK_SEC)
-ax4.set_ylabel("Number of remaining patients", fontsize=9, color=INK_SEC)
+ax4.set_xlabel("Predicted monthly hazard (%)", fontsize=11, color=INK_SEC)
+ax4.set_ylabel("Number of remaining patients", fontsize=11, color=INK_SEC)
 ax4.set_title(
     f"Next adopters: risk distribution of {len(last_obs)} remaining patients",
     fontsize=10,
@@ -508,7 +505,7 @@ ax4.set_title(
     color=INK_PRI,
     loc="left",
 )
-ax4.legend(fontsize=8, frameon=False)
+ax4.legend(fontsize=10, frameon=False)
 ax4.xaxis.set_major_formatter(mtick.PercentFormatter())
 
 # Annotation box
@@ -517,7 +514,7 @@ ax4.text(
     0.95,
     f"AUC = {auc_pt:.3f}\n95% CI [{auc_lo:.3f}, {auc_hi:.3f}]",
     transform=ax4.transAxes,
-    fontsize=8.5,
+    fontsize=9.5,
     color=INK_SEC,
     va="top",
     ha="right",
@@ -527,6 +524,6 @@ ax4.text(
 plt.tight_layout(rect=[0, 0, 1, 0.96])
 out_path = Path("outputs/task1_adoption/03_adoption_figure.png")
 out_path.parent.mkdir(parents=True, exist_ok=True)
-plt.savefig(out_path, dpi=150, bbox_inches="tight", facecolor=SURFACE)
+plt.savefig(out_path, dpi=500, bbox_inches="tight", facecolor=SURFACE)
 print(f"\nFigure saved to {out_path}")
 plt.close()

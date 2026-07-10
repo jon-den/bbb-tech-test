@@ -10,6 +10,8 @@ import pandas as pd
 from sklearn.base import BaseEstimator
 from sklearn.metrics import brier_score_loss, roc_auc_score
 
+from src.style import C_OBS, C_PRED, C_REF, INK_PRI, INK_SEC, style_ax
+
 
 @dataclass
 class DatasetCols:
@@ -66,16 +68,37 @@ def calibration_plot(
     tbl = calibration_table(y_true, y_pred, n_bins)
     if ax is None:
         _, ax = plt.subplots(figsize=(6, 6))
-    ax.scatter(
-        tbl["mean_pred"], tbl["observed_rate"], s=tbl["n"] * 2, zorder=3, label=label, alpha=0.8
-    )
     lims = [0, max(tbl["mean_pred"].max(), tbl["observed_rate"].max()) * 1.2]
-    ax.plot(lims, lims, "k--", alpha=0.4, label="Perfect calibration")
-    ax.set_xlabel("Mean predicted probability")
-    ax.set_ylabel("Observed event rate")
-    ax.set_title("Calibration plot")
+    ax.plot(
+        lims,
+        lims,
+        color=C_REF,
+        linewidth=1.2,
+        linestyle="--",
+        zorder=1,
+        label="Perfect calibration",
+    )
+    ax.scatter(
+        tbl["mean_pred"],
+        tbl["observed_rate"],
+        s=tbl["n"] * 2,
+        color=C_OBS,
+        alpha=0.8,
+        zorder=3,
+        label=label,
+    )
+    ax.set_xlabel("Mean predicted probability", fontsize=9, color=INK_SEC)
+    ax.set_ylabel("Observed event rate", fontsize=9, color=INK_SEC)
+    ax.set_title(
+        "Calibration plot",
+        fontsize=10,
+        fontweight="bold",
+        color=INK_PRI,
+        loc="left",
+    )
     if label:
-        ax.legend()
+        ax.legend(fontsize=8, frameon=False)
+    style_ax(ax, hide_top_right=True, grid_axis="both")
     return ax
 
 
@@ -111,20 +134,37 @@ def count_calibration_plot(
         _, ax = plt.subplots(figsize=(10, 5))
     x = monthly[month_col]
     bar_width = 0.4
-    ax.bar(x, monthly["observed"], alpha=0.5, label="Observed", width=bar_width, align="edge")
+    ax.bar(
+        x,
+        monthly["observed"],
+        alpha=0.8,
+        label="Observed",
+        width=bar_width,
+        align="edge",
+        color=C_OBS,
+        zorder=2,
+    )
     ax.bar(
         x + bar_width,
         monthly["predicted"],
-        alpha=0.5,
+        alpha=0.8,
         label="Predicted",
         width=bar_width,
         align="edge",
-        color="C1",
+        color=C_PRED,
+        zorder=2,
     )
-    ax.set_xlabel("Study month")
-    ax.set_ylabel("New initiations")
-    ax.set_title("Count-level calibration: predicted vs observed monthly new starts")
-    ax.legend()
+    ax.set_xlabel("Study month", fontsize=9, color=INK_SEC)
+    ax.set_ylabel("New initiations", fontsize=9, color=INK_SEC)
+    ax.set_title(
+        "Count-level calibration: predicted vs observed monthly new starts",
+        fontsize=10,
+        fontweight="bold",
+        color=INK_PRI,
+        loc="left",
+    )
+    ax.legend(fontsize=8, frameon=False)
+    style_ax(ax, hide_top_right=True, grid_axis="y")
     return ax
 
 

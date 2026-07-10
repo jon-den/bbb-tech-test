@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 
+from src.style import C_ARCH, C_OBS, INK_MUT, INK_PRI, INK_SEC, SURFACE, style_ax
 from src.task1_adoption.config import (
     LAUNCH_MONTH,
     MONTH_COL,
@@ -30,13 +31,8 @@ from src.task1_adoption.models import DiscreteHazardGLM
 
 np.random.seed(42)
 
-SURFACE = "#fcfcfb"
-GRID = "#e1e0d9"
-INK_PRI = "#0b0b0b"
-INK_SEC = "#52514e"
-INK_MUT = "#898781"
-C_POINT = "#2a78d6"
-C_CI = "#86b6ef"
+C_POINT = C_OBS
+# C_CI is C_ARCH[0] from src.style
 
 FEATURE_LABELS = {
     "features__ccb_ever": "Ever prescribed CCB\n(verapamil / diltiazem)",
@@ -84,10 +80,10 @@ def main():
     hi = hi[order]
     pvals = pvals[order]
 
-    fig, ax = plt.subplots(figsize=(8, 4.5), facecolor=SURFACE)
-    ax.set_facecolor(SURFACE)
-    for spine in ax.spines.values():
-        spine.set_color(GRID)
+    n_rows = len(labels)
+    fig, ax = plt.subplots(figsize=(9, 1.1 + n_rows * 0.55), facecolor=SURFACE)
+    style_ax(ax, hide_top_right=True, grid_axis="x")
+    ax.grid(axis="y", visible=False)
 
     y_pos = np.arange(len(labels))
 
@@ -99,7 +95,7 @@ def main():
         xerr=[hrs - lo, hi - hrs],
         fmt="o",
         color=C_POINT,
-        ecolor=C_CI,
+        ecolor=C_ARCH[0],
         elinewidth=2.5,
         capsize=5,
         capthick=1.5,
@@ -130,9 +126,6 @@ def main():
         color=INK_PRI,
         loc="left",
     )
-    ax.tick_params(colors=INK_MUT, labelsize=9)
-    ax.grid(axis="x", color=GRID, linewidth=0.7, zorder=0)
-    ax.grid(axis="y", visible=False)
     ax.invert_yaxis()
 
     ax.xaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: f"{x:g}"))
@@ -140,7 +133,7 @@ def main():
     plt.tight_layout()
     out_path = Path("outputs/task1_adoption/05_hr_forest_plot.png")
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(out_path, dpi=150, bbox_inches="tight", facecolor=SURFACE)
+    plt.savefig(out_path, dpi=500, bbox_inches="tight", facecolor=SURFACE)
     print(f"Saved to {out_path}")
     plt.close()
 

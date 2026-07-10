@@ -244,18 +244,10 @@ def plot_tam_distribution_2026(
     import matplotlib.pyplot as plt
     import matplotlib.ticker as mtick
 
+    from src.style import C_HIST, C_MED, C_MODE, INK_MUT, INK_PRI, INK_SEC, SURFACE, style_ax
+
     if p is None:
         p = FunnelParams()
-
-    # Palette
-    SURFACE = "#fcfcfb"
-    GRID = "#e1e0d9"
-    INK_PRI = "#0b0b0b"
-    INK_SEC = "#52514e"
-    INK_MUT = "#898781"
-    C_HIST = "#104281"  # dominant blue
-    C_MED = "#e88a1a"  # orange — MC median
-    C_MODE = "#7c9dc7"  # muted blue — deterministic mode-product
 
     median = float(np.percentile(mc_tam, 50))
     p10 = float(np.percentile(mc_tam, 10))
@@ -264,13 +256,20 @@ def plot_tam_distribution_2026(
     mode_product = p.us_adults * (p.prev_mode / 1e5) * (p.obstr_mode * p.sympt_mode)
 
     tam_k = mc_tam / 1000
-    fig, ax = plt.subplots(figsize=(9, 5.2), facecolor=SURFACE)
-    ax.set_facecolor(SURFACE)
+    fig, ax = plt.subplots(figsize=(10, 5), facecolor=SURFACE)
 
     # Histogram — cap x-axis at the 99.5th percentile so the visible bars
     # fill the frame; the far right tail beyond ~1% is dead space.
     x_upper = float(np.percentile(tam_k, 99.5))
-    ax.hist(tam_k, bins=50, color=C_HIST, alpha=0.75, edgecolor="none", zorder=2)
+    ax.hist(
+        tam_k,
+        bins=40,
+        color=C_HIST,
+        alpha=0.80,
+        edgecolor=SURFACE,
+        linewidth=0.5,
+        zorder=2,
+    )
     ax.set_xlim(left=max(0, float(np.percentile(tam_k, 0.5)) - 5), right=x_upper + 5)
 
     # 80% CI shaded band
@@ -303,20 +302,15 @@ def plot_tam_distribution_2026(
         label=f"Deterministic mode-product = {mode_product / 1000:.0f}k",
     )
 
-    ax.set_xlabel("US addressable market, 2026 (patients)", fontsize=11, color=INK_SEC)
-    ax.set_ylabel("MC draws", fontsize=11, color=INK_SEC)
+    ax.set_xlabel("US addressable market, 2026 (patients)", fontsize=9, color=INK_SEC)
+    ax.set_ylabel("MC draws", fontsize=9, color=INK_SEC)
     ax.xaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: f"{int(x)}k"))
-    for spine_name in ("top", "right"):
-        ax.spines[spine_name].set_visible(False)
-    for spine_name in ("left", "bottom"):
-        ax.spines[spine_name].set_color(GRID)
-    ax.tick_params(colors=INK_MUT, labelsize=10)
-    ax.grid(True, axis="y", alpha=0.4, color=GRID, linewidth=0.5, zorder=1)
+    style_ax(ax, grid_axis="y", hide_top_right=True)
     ax.set_axisbelow(True)
-    ax.legend(fontsize=9.5, frameon=False, loc="upper right")
+    ax.legend(fontsize=8, frameon=False, loc="upper right")
     ax.set_title(
         "Monte Carlo distribution of 2026 TAM (n=10,000 draws)",
-        fontsize=12.5,
+        fontsize=10,
         fontweight="bold",
         color=INK_PRI,
         loc="left",
@@ -328,12 +322,12 @@ def plot_tam_distribution_2026(
         "MC median (orange) is above the deterministic mode-product (blue dotted)\n"
         "because the prevalence triangle is right-skewed — the MC integrates the long upper tail.",
         transform=ax.transAxes,
-        fontsize=8.5,
+        fontsize=8,
         color=INK_MUT,
     )
 
     out_path = Path(out_path)
     fig.tight_layout()
-    fig.savefig(out_path, dpi=150, bbox_inches="tight", facecolor=SURFACE)
+    fig.savefig(out_path, dpi=500, bbox_inches="tight", facecolor=SURFACE)
     plt.close(fig)
     return out_path

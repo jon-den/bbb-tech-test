@@ -26,6 +26,17 @@ import pandas as pd
 from scipy import stats
 from sklearn.compose import ColumnTransformer
 
+from src.style import (
+    C_OBS,
+    C_PRED,
+    C_REF,
+    GRID,
+    INK_MUT,
+    INK_PRI,
+    INK_SEC,
+    SURFACE,
+    style_ax,
+)
 from src.task1_adoption.config import (
     LAUNCH_MONTH,
     MONTH_COL,
@@ -38,16 +49,6 @@ from src.task1_adoption.dataset import build_dataset
 from src.task1_adoption.models import DiscreteHazardGLM
 
 np.random.seed(42)
-
-# ── Palette ───────────────────────────────────────────────────────────────────
-C_OBS = "#2a78d6"
-C_PRED = "#1baf7a"
-C_REF = "#c3c2b7"  # 45° perfect-calibration diagonal
-SURFACE = "#fcfcfb"
-GRID = "#e1e0d9"
-INK_PRI = "#0b0b0b"
-INK_SEC = "#52514e"
-INK_MUT = "#898781"
 
 
 def make_preprocessor(feature_cols):
@@ -178,10 +179,10 @@ for _, r in bb_cal.iterrows():
 
 # ── 5. Figure ─────────────────────────────────────────────────────────────────
 
-fig, axes = plt.subplots(1, 3, figsize=(15, 5), facecolor=SURFACE)
+fig, axes = plt.subplots(1, 3, figsize=(15, 5.5), facecolor=SURFACE)
 fig.suptitle(
     "Model Calibration — Discrete-Time Hazard (Cloglog)",
-    fontsize=13,
+    fontsize=12,
     fontweight="bold",
     color=INK_PRI,
     x=0.02,
@@ -189,10 +190,7 @@ fig.suptitle(
 )
 
 for ax in axes:
-    ax.set_facecolor(SURFACE)
-    for spine in ax.spines.values():
-        spine.set_color(GRID)
-    ax.tick_params(colors=INK_MUT, labelsize=9)
+    style_ax(ax, hide_top_right=True, grid_axis="none")
 
 # ── Panel 1: Reliability diagram ──────────────────────────────────────────────
 ax1 = axes[0]
@@ -249,7 +247,7 @@ ax1.set_title(
 ax1.xaxis.set_major_formatter(mtick.PercentFormatter())
 ax1.yaxis.set_major_formatter(mtick.PercentFormatter())
 ax1.legend(fontsize=8, frameon=False)
-ax1.grid(color=GRID, linewidth=0.7, zorder=0)
+style_ax(ax1, hide_top_right=True, grid_axis="both")
 ax1.set_xlim(-0.02 * 100 * max_val, max_val * 100 * 1.05)
 ax1.set_ylim(-0.02 * 100 * max_val, max_val * 100 * 1.05)
 
@@ -294,7 +292,7 @@ ax2.set_title(
     loc="left",
 )
 ax2.legend(fontsize=8, frameon=False)
-ax2.grid(axis="y", color=GRID, linewidth=0.7, zorder=0)
+style_ax(ax2, hide_top_right=True, grid_axis="y")
 
 # MAE annotation
 mae = float((monthly["pred"] - monthly["obs"]).abs().mean())
@@ -363,7 +361,7 @@ ax3.set_title(
     loc="left",
 )
 ax3.legend(fontsize=8, frameon=False)
-ax3.grid(axis="x", color=GRID, linewidth=0.7, zorder=0)
+style_ax(ax3, hide_top_right=True, grid_axis="x")
 ax3.grid(axis="y", visible=False)
 ax3.xaxis.set_major_formatter(mtick.PercentFormatter())
 ax3.invert_yaxis()
@@ -382,6 +380,6 @@ for i, row in all_sub.iterrows():
 plt.tight_layout(rect=[0, 0, 1, 0.94])
 out_path = Path("outputs/task1_adoption/04_calibration.png")
 out_path.parent.mkdir(parents=True, exist_ok=True)
-plt.savefig(out_path, dpi=150, bbox_inches="tight", facecolor=SURFACE)
+plt.savefig(out_path, dpi=500, bbox_inches="tight", facecolor=SURFACE)
 print(f"\nFigure saved to {out_path}")
 plt.close()

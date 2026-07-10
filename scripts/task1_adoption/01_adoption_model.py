@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 
+from src.style import INK_PRI, SURFACE
 from src.task1_adoption.config import (
     CANDIDATE_FEATURES,
     CLINICAL_FEATURES,
@@ -275,26 +276,46 @@ def main():
         print(f"Cox cross-check failed: {exc}")
 
     # ── 9. Plots ────────────────────────────────────────────────────
-    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10), facecolor=SURFACE)
+    fig.suptitle(
+        "Model evaluation — feature selection & calibration",
+        fontsize=12,
+        fontweight="bold",
+        color=INK_PRI,
+        x=0.02,
+        ha="left",
+    )
 
     selector.plot(ax=axes[0, 0])
-    lasso_path_plot(train[expanded_available], y_train, ax=axes[0, 1])
+    lasso_path_plot(train[expanded_available], y_train, ax=axes[0, 1], highlight_features=selected)
 
     # Use refined model for calibration plots
     y_pred = models["refined"].predict_proba(datasets["refined"][1])[:, 1]
     calibration_plot(y_test.values, y_pred, n_bins=5, ax=axes[1, 0], label="Refined model")
-    axes[1, 0].set_title("Calibration (quintiles, test set)")
+    axes[1, 0].set_title(
+        "Calibration (quintiles, test set)",
+        fontsize=10,
+        fontweight="bold",
+        color=INK_PRI,
+        loc="left",
+    )
 
     test_pred = test.copy()
     test_pred["pred"] = y_pred
     monthly = count_calibration(test_pred)
     count_calibration_plot(monthly, ax=axes[1, 1])
-    axes[1, 1].set_title("Count-level calibration (test set)")
+    axes[1, 1].set_title(
+        "Count-level calibration (test set)",
+        fontsize=10,
+        fontweight="bold",
+        color=INK_PRI,
+        loc="left",
+    )
 
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
     out = Path("outputs/task1_adoption/01_model_evaluation.png")
     out.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(out, dpi=150, bbox_inches="tight")
+    plt.savefig(out, dpi=500, bbox_inches="tight", facecolor=SURFACE)
     print(f"\nPlots saved to {out}")
 
 
