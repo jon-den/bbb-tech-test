@@ -84,7 +84,9 @@ The 14-feature candidate pool includes demographics, comorbidity flags, all beta
 
 The 14 candidates rank as follows (patient-`GroupKFold`, C=0.13):
 
-| Rank | Feature | Selection prob |
+::: {.feature-rank}
+
+| Rank | Feature | Selection probability |
 |---:|---|---:|
 | 1 | `ccb_ever` | 1.00 |
 | 2 | `bb_current` | 1.00 |
@@ -96,6 +98,8 @@ The 14 candidates rank as follows (patient-`GroupKFold`, C=0.13):
 | 7 | `months_since_last_med_change` | 0.30 |
 | 8 | `n_hcm_meds` | 0.28 |
 | 9–14 | age, sex, hf_flag, bb_ever, mitral_flag, diso_mpr_12m | ≤ 0.19 |
+
+:::
 
 The final model contains the set of features passing the 0.60 threshold: **`ccb_ever`, `bb_current`, `ccb_current`, `months_since_diso`**.
 
@@ -126,6 +130,8 @@ The archetype panel (bottom left) shows the spread in predicted monthly hazard a
 
 #### Model performance
 
+::: {.model-perf}
+
 | Metric | Value | Interpretation |
 |---|---|---|
 | AUC | **0.72** [0.67, 0.78] | Ranks future initiators above non-initiators 72% of the time (null = 0.50). |
@@ -133,7 +139,11 @@ The archetype panel (bottom left) shows the spread in predicted monthly hazard a
 | Count MAE | **2.3/month** | Predicted monthly counts track observed within ±2. |
 | Hosmer-Lemeshow | **p = 0.21** | No evidence of miscalibration (p > 0.05 = predicted and observed rates agree across subgroups). |
 
+:::
+
 **Model benchmarking.** The GLM is compared against a null baseline and a gradient-boosted survival model (Cox partial likelihood loss, scikit-survival):
+
+::: {.model-bench}
 
 | Model | AUC | BSS |
 |---|---:|---:|
@@ -141,6 +151,8 @@ The archetype panel (bottom left) shows the spread in predicted monthly hazard a
 | **Refined GLM (cloglog, 4 features)** | **0.72** | **+0.009** |
 | GBM (Cox PH, same features) | 0.65 | +0.001 |
 | Full feature set GLM | 0.67 | −0.001 |
+
+:::
 
 The refined GLM outperforms both the nonlinear GBM and the full feature set GLM on both metrics. The small event count (~91) is the limitation for model complexity, and the pre-filter + stability step is what helps to create a simple but robust model.
 
@@ -204,15 +216,16 @@ Multiplying: **Min = 22%** = `0.49 × 0.45` (exact 0.2205); **Mode = 44%** = `0.
 
 **Today (2026).**
 
+MC median **~127k patients**, 80% CI **~84k – 195k**. The distribution is right-skewed because the prevalence max (200/100k) sits well above its mode (80/100k), which pulls the MC median above the deterministic mode-product (~94k, shown for reference as the blue dotted line).
+
 ![Monte Carlo distribution of 2026 TAM (n=10,000 draws)](../outputs/task2_tam/02_top_down_tam_2026.png)
+**Outlook (2026 → 2030).** Anchored at the MC median (127k), three growth scenarios from 2026 forward:
 
-MC median **~127k patients**, 80% CI **~84k – 195k**. The distribution is right-skewed because the prevalence triangle's max (Massera 200/100k) sits well above its mode (Butzner 80/100k), which pulls the MC median above the deterministic mode-product (~94k, shown for reference as the blue dotted line).
-
-**Outlook (2026 → 2030).** Anchoring the projection at the MC median (127k) and applying the three growth scenarios from 2026 forward:
-
-- **Base case (4.7%/yr — midpoint of measured rates):** ~139k by 2028, **~152k by 2030**.
-- **Floor (2%/yr — Butzner 2026 measured incidence):** ~132k by 2028, **~137k by 2030**.
-- **Ceiling (7.4%/yr — Butzner 2021 ICD-10-era rate):** ~146k by 2028, **~169k by 2030**.
+| Scenario | Rate | 2028 | 2030 |
+|---|---|---:|---:|
+| Floor | 2%/yr | ~132k | ~137k |
+| **Base — midpoint of measured rates** | **4.7%/yr** | **~139k** | **~152k** |
+| Ceiling | 7.4%/yr | ~146k | ~169k |
 
 **Note** This is a projection of the eligible pool, not a Camzyos-on-drug forecast. The latter is a diffusion question (peak penetration, ramp shape,  label extension) and needs more data.
 
@@ -220,13 +233,12 @@ MC median **~127k patients**, 80% CI **~84k – 195k**. The distribution is righ
 
 ## Limitations
 
-- **Synthetic data artefact.** The 98.8% Disopyramide→Camzyos co-occurrence is higher than real-world US claims, inflating in-sample conversion; conversion rates and archetype hazards would shift with real data.
-- **No prescriber granularity.** REMS certification is likely the strongest single predictor of Camzyos initiation but is invisible in patient-level claims without NPI linkage.
+- **Synthetic data artefact.** The 98.8% Disopyramide→Camzyos co-occurrence seems very high; conversion rates and archetype hazards could shift with real data.
 - **Small sample size.** ~91 training events limit feature count. The nonlinear GBM benchmark did not improve discrimination, suggesting the linear model captures the available signal.
-- **Claims data only — no clinical detail.** LVOT gradient, NYHA class, echocardiographic findings — the variables that actually drive prescribing decisions — are absent from billing data. EHR linkage (IQVIA EHR Linked, TriNetX, Truveta) could unlock them.
-- **US commercial claims only (Task 1 + Task 2 prevalence anchor).** The ≥65 Medicare population is likely underrepresented and true prevalence higher; ex-US markets are not addressed.
-- **Prevalence triangle spans international + temporal sources (Task 2).** The 2026 prevalence range (70–200/100k) combines Husser 2018 (Germany 2015), Butzner 2021 (US 2019), and Massera 2023 (imaging ceiling). No US-2026 point-prevalence measurement exists; the triangle captures this via width. Future projection (2026→2030) uses growth scenarios 2–7.4%/yr, bracketed by Butzner 2026 (measured incidence trend) and Butzner 2021 (ICD-10-era historical rate).
-- **Adult-only, current-label denominator (Task 2).** SCOUT-HCM (adolescents 12 to <18) is a live label-expansion catalyst adding patients outside this denominator. Non-obstructive HCM is closed: ODYSSEY-HCM missed both co-primary endpoints in April 2025.
+- **Claims data only — no clinical detail.** LVOT gradient, NYHA class, echocardiographic findings, i.e., the variables that actually drive prescribing decisions, are absent from billing data. EHR linkage (IQVIA EHR Linked, TriNetX, Truveta) could unlock them.
+- **Task 1 panel selection is opaque.** The DATA_README says "US commercial claims" but leaves the selection criteria unspecified, whether Medicare/Medicaid is included is unknown and hence its generalisability as well.
+- **Prevalence triangle spans international + temporal sources (Task 2).** The 2026 prevalence range (70–200/100k) combines [@husser2018] (Germany 2015), [@butzner2021] (US 2019), and [@massera2023] (imaging ceiling). No US-2026 point-prevalence measurement exists; the triangle captures this via width. Future projection (2026→2030) uses growth scenarios 2–7.4%/yr, bracketed by [@butzner2026] (measured incidence trend) and [@butzner2021] (ICD-10-era historical rate).
+- **Adult-only, current-label denominator (Task 2).** SCOUT-HCM (adolescents 12 to <18) is a live label-expansion catalyst adding patients outside this denominator. Non-obstructive HCM is closed: trial ODYSSEY-HCM missed both co-primary endpoints in April 2025.
 - **Independence assumption (Task 2 MC).** Prevalence and eligibility are drawn independently; Camzyos-driven awareness may couple them, likely making the CI slightly too tight.
 
 ## What I would change with more time or data
@@ -251,8 +263,6 @@ MC median **~127k patients**, 80% CI **~84k – 195k**. The distribution is righ
 ---
 
 ## References
-
-All quantitative claims are grounded in either our analysis pipeline (reproducible via `notebooks/02_camzyos_analysis.ipynb`) or the cited sources below. Task 2 top-down funnel: [`src/task2_tam/top_down.py`](../src/task2_tam/top_down.py) (module), [`scripts/task2_tam/02_top_down_funnel.py`](../scripts/task2_tam/02_top_down_funnel.py) (driver + 17 hard-asserted sanity checks against every headline number in this document). Outputs: [`outputs/task2_tam/02_top_down_tam_2026.csv`](../outputs/task2_tam/02_top_down_tam_2026.csv), [`02_top_down_scenarios.csv`](../outputs/task2_tam/02_top_down_scenarios.csv), [`02_top_down_over_time.csv`](../outputs/task2_tam/02_top_down_over_time.csv).
 
 ::: {#refs}
 :::

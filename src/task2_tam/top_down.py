@@ -267,8 +267,11 @@ def plot_tam_distribution_2026(
     fig, ax = plt.subplots(figsize=(9, 5.2), facecolor=SURFACE)
     ax.set_facecolor(SURFACE)
 
-    # Histogram
+    # Histogram — cap x-axis at the 99.5th percentile so the visible bars
+    # fill the frame; the far right tail beyond ~1% is dead space.
+    x_upper = float(np.percentile(tam_k, 99.5))
     ax.hist(tam_k, bins=50, color=C_HIST, alpha=0.75, edgecolor="none", zorder=2)
+    ax.set_xlim(left=max(0, float(np.percentile(tam_k, 0.5)) - 5), right=x_upper + 5)
 
     # 80% CI shaded band
     ax.axvspan(
@@ -321,9 +324,9 @@ def plot_tam_distribution_2026(
     )
     ax.text(
         0.0,
-        -0.14,
-        "MC median (orange) is above the deterministic mode-product (blue dotted) because "
-        "the prevalence triangle is right-skewed — the MC integrates over the long upper tail.",
+        -0.22,
+        "MC median (orange) is above the deterministic mode-product (blue dotted)\n"
+        "because the prevalence triangle is right-skewed — the MC integrates the long upper tail.",
         transform=ax.transAxes,
         fontsize=8.5,
         color=INK_MUT,
