@@ -1,5 +1,0 @@
-label,ccb_ever,bb_current,ccb_current,hazard_per_month,hazard_per_month_pct,median_tti_months
-"Not escalated (on BB, no CCB history)",0,1,0,0.00075,0.075,923.8
-"Currently managed (on BB + CCB, CCB history)",1,1,1,0.000798,0.0798,867.9
-"CCB-tried, still on BB (escalated, not off meds)",1,1,0,0.004045,0.4045,171.0
-"Escalated, off meds (CCB history, off both)",1,0,0,0.026365,2.6365,25.9

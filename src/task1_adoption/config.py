@@ -9,7 +9,7 @@ Sections
 5. Dataclass configs (DatasetConfig, SplitConfig, ModelConfig)
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 # ── 1. Paths ─────────────────────────────────────────────────────────────────
@@ -229,6 +229,3 @@ class ModelConfig:
     """Discrete-time hazard model configuration."""
 
     link: str = "cloglog"  # "cloglog" (log-hazard-ratio) | "logit" (log-odds-ratio)
-    baseline: str = "month_dummies"  # baseline hazard specification
-    features: list = field(default_factory=lambda: CLINICAL_FEATURES.copy())
-    random_seed: int = 42

@@ -10,7 +10,6 @@ Analysis of Camzyos (mavacamten) adoption in US commercial claims data (~30k car
 
 1. **[docs/CASE_STUDY.pdf](docs/CASE_STUDY.pdf)** — primary deliverable. Task 1 + Task 2 write-up with embedded figures, cited references, and reproducible pipeline pointers.
 2. **[notebooks/02_camzyos_analysis.ipynb](notebooks/02_camzyos_analysis.ipynb)** — reproducible technical notebook. Runs end-to-end from `synthetic_data/`.
-3. **[docs/AGENTIC_AI_PLAN.md](docs/AGENTIC_AI_PLAN.md)** — Task 3 pitch.
 
 ## Setup
 
@@ -41,6 +40,7 @@ Every script is self-contained and reads directly from `synthetic_data/`.
 .venv/bin/python scripts/task1_adoption/03_adoption_figure.py    # four-panel adoption figure (case study)
 .venv/bin/python scripts/task1_adoption/04_calibration.py        # reliability + subgroup calibration
 .venv/bin/python scripts/task1_adoption/05_hr_forest_plot.py     # hazard ratio forest plot (case study)
+.venv/bin/python scripts/task1_adoption/consolidate_outputs.py   # merge per-script CSVs/JSONs → task1_outputs.xlsx + task1_scalars.json
 ```
 
 **Task 2 — top-down TAM funnel.** Single script; asserts every rounded-k value in the case study.
@@ -86,15 +86,22 @@ src/
     top_down.py            — FunnelParams, MC over triangular priors, plot helpers
 
 scripts/
-  task1_adoption/          — Numbered Task 1 pipeline scripts (01–05)
+  task1_adoption/          — Numbered Task 1 pipeline scripts (01–05) + consolidate_outputs.py
     experiments_feature_selection.py  — Sensitivity of the stability-selection matrix
   task2_tam/
     02_top_down_funnel.py  — Driver + 17 sanity-check assertions against docs/CASE_STUDY.md
   build_pdf.sh             — Build docs/CASE_STUDY.pdf (pandoc + Chrome headless)
 
 outputs/
-  task1_adoption/          — Figures and CSVs from Task 1
-  task2_tam/               — Figures and CSVs from Task 2
+  task1_adoption/
+    03_adoption_figure.png   — four-panel adoption dynamics figure (embedded in case study)
+    04_calibration.png       — reliability + subgroup calibration figure
+    05_hr_forest_plot.png    — hazard ratio forest plot (embedded in case study)
+    task1_outputs.xlsx       — all tabular outputs as named sheets (model_comparison, coefficients, ...)
+    task1_scalars.json       — scalar KPIs (AUC, BSS, penetration, HL test, ...)
+  task2_tam/
+    02_top_down_tam_2026.png — MC TAM distribution histogram (embedded in case study)
+    02_top_down_*.csv        — funnel scenarios and over-time projections
 
 tests/                     — Concise unit tests for src/ modules
 notebooks/
@@ -103,7 +110,6 @@ notebooks/
 
 docs/
   CASE_STUDY.md / .pdf     — Primary deliverable
-  AGENTIC_AI_PLAN.md       — Task 3 pitch
   CANDIDATE_BRIEF.md       — Original take-home spec
   references.bib           — BibTeX used by the PDF build
 
