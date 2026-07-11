@@ -37,18 +37,11 @@ docs/_internal/
 # Source PDFs — copyrighted, kept locally only
 references/
 
-# Outputs: commit only the three case-study figures and consolidated data files.
-# All per-script intermediates (individual CSVs, JSONs, experiments/) are regenerable.
+# Outputs: commit only the case-study figures and TAM data files.
+# Everything else is regenerable from scripts.
+outputs/task1_adoption/*.csv
+outputs/task1_adoption/*.json
+outputs/task1_adoption/*.xlsx
 outputs/task1_adoption/01_model_evaluation.png
-outputs/task1_adoption/02_sensitivity.csv
-outputs/task1_adoption/03_archetypes.csv
-outputs/task1_adoption/03_monthly_predictions.csv
-outputs/task1_adoption/03_summary.json
-outputs/task1_adoption/04_hl_test.json
-outputs/task1_adoption/04_monthly_calibration.csv
-outputs/task1_adoption/04_reliability.csv
-outputs/task1_adoption/04_subgroup_calibration.csv
-outputs/task1_adoption/05_hr_table.csv
-outputs/task1_adoption/01_model_comparison.csv
-outputs/task1_adoption/01_coef_refined.csv
+outputs/task1_adoption/04_calibration.png
 outputs/task1_adoption/experiments/
