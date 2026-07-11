@@ -3,6 +3,11 @@
   "auc_ci_lo": 0.6645,
   "auc_ci_hi": 0.7746,
   "brier_skill_score": 0.0089,
+  "bss_ci_lo": 0.004,
+  "bss_ci_hi": 0.0123,
+  "count_mae": 1.743,
+  "count_mae_ci_lo": 1.54,
+  "count_mae_ci_hi": 3.683,
   "n_test_events": 55,
   "pool_size": 775,
   "initiated": 146,
@@ -16,10 +21,5 @@
   "hl_dof": 8,
   "hl_pval": 0.2108,
   "n_bins": 10,
-  "mae_patients_per_month": 1.743,
-  "bss_ci_lo": 0.004,
-  "bss_ci_hi": 0.0123,
-  "count_mae": 1.743,
-  "count_mae_ci_lo": 1.54,
-  "count_mae_ci_hi": 3.683
+  "mae_patients_per_month": 1.743
 }
