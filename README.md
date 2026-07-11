@@ -9,7 +9,7 @@ Analysis of Camzyos (mavacamten) adoption in US commercial claims data (~30k car
 ## For reviewers — start here
 
 1. **[docs/TASK_1_2_CASE_STUDY.pdf](docs/TASK_1_2_CASE_STUDY.pdf)** — Task 1 + Task 2 write-up with embedded figures, cited references, and reproducible pipeline pointers.
-2. **[docs/BioCarta_Agentic_System.pptx](docs/BioCarta_Agentic_System.pptx)** — Task 3 pitch deck.
+2. **[docs/TASK_3_PITCH.pdf](docs/TASK_3_PITCH.pdf)** — Task 3 pitch.
 3. **[notebooks/02_camzyos_analysis.ipynb](notebooks/02_camzyos_analysis.ipynb)** — reproducible technical notebook. Runs end-to-end from `synthetic_data/`.
 
 ## Setup
