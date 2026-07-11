@@ -21,8 +21,12 @@ __pycache__/
 marketscan_exploration/
 data/
 
-# synthetic_data/ is committed; the source zip is excluded
-synthetic_data.zip
+# Unzipped CSVs are regenerable from the zip
+synthetic_data/*.csv
+synthetic_data/DATA_README.md
+
+# Keep the zip committed
+# synthetic_data.zip
 
 # Agent workspace
 .claude/
