@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Task 2 — Top-down epidemiological funnel for US Camzyos TAM.
 
-Reproduces every number in the Task 2 section of `docs/CASE_STUDY.md`.
+Reproduces every number in the Task 2 section of `docs/TASK_1_2_CASE_STUDY.md`.
 Emits three CSVs, one PNG, and 17 hard-asserted sanity checks against the
 rounded-k values in the case study.
 
@@ -44,7 +44,7 @@ def _pct(x: np.ndarray, q: float) -> float:
 
 
 def _k(x: float) -> int:
-    """Round to nearest thousand — the reporting unit used in docs/CASE_STUDY.md."""
+    """Round to nearest thousand — the reporting unit used in docs/TASK_1_2_CASE_STUDY.md."""
     return int(round(x / 1000))
 
 
@@ -165,10 +165,10 @@ for path in [
     print(f"   → {path}")
 
 
-# ── 9. Sanity checks against docs/CASE_STUDY.md ───────────────────────────
+# ── 9. Sanity checks against docs/TASK_1_2_CASE_STUDY.md ───────────────────────────
 # Every doc number is rounded to the nearest 1,000 and reported in "k".
 # These checks demand EXACT match on rounded-k values (no tolerance).
-print("\n8. Sanity checks against docs/CASE_STUDY.md (exact rounded-k match):")
+print("\n8. Sanity checks against docs/TASK_1_2_CASE_STUDY.md (exact rounded-k match):")
 
 
 def _check_k(name: str, actual: float, expected_k: int) -> None:

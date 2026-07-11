@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build docs/CASE_STUDY.pdf from docs/CASE_STUDY.md.
+# Build docs/TASK_1_2_CASE_STUDY.pdf from docs/TASK_1_2_CASE_STUDY.md.
 #
 # Pipeline: pandoc (markdown → styled HTML, images embedded, citations rendered
 # from docs/references.bib) → Chrome headless (HTML → PDF).
@@ -8,7 +8,7 @@
 #   - pandoc ≥ 3.0            (brew install pandoc)
 #   - Google Chrome            (macOS default install path)
 #   - docs/references.bib      (BibTeX for --citeproc)
-#   - docs/CASE_STUDY.md YAML  (bibliography: references.bib)
+#   - docs/TASK_1_2_CASE_STUDY.md YAML  (bibliography: references.bib)
 #
 # Run from anywhere; paths are resolved relative to this script's location.
 
@@ -18,8 +18,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
-INPUT="docs/CASE_STUDY.md"
-OUTPUT="docs/CASE_STUDY.pdf"
+INPUT="docs/TASK_1_2_CASE_STUDY.md"
+OUTPUT="docs/TASK_1_2_CASE_STUDY.pdf"
 # mktemp -t X.html produces X.html.<random>; Chrome then treats the file as
 # unknown extension and stops parsing <style> tags correctly (renders CSS as
 # body text). Suffix must be exactly .html for Chrome to parse it as HTML.

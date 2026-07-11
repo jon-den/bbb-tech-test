@@ -8,8 +8,9 @@ Analysis of Camzyos (mavacamten) adoption in US commercial claims data (~30k car
 
 ## For reviewers — start here
 
-1. **[docs/CASE_STUDY.pdf](docs/CASE_STUDY.pdf)** — primary deliverable. Task 1 + Task 2 write-up with embedded figures, cited references, and reproducible pipeline pointers.
-2. **[notebooks/02_camzyos_analysis.ipynb](notebooks/02_camzyos_analysis.ipynb)** — reproducible technical notebook. Runs end-to-end from `synthetic_data/`.
+1. **[docs/TASK_1_2_CASE_STUDY.pdf](docs/TASK_1_2_CASE_STUDY.pdf)** — Task 1 + Task 2 write-up with embedded figures, cited references, and reproducible pipeline pointers.
+2. **[docs/BioCarta_Agentic_System.pptx](docs/BioCarta_Agentic_System.pptx)** — Task 3 pitch deck.
+3. **[notebooks/02_camzyos_analysis.ipynb](notebooks/02_camzyos_analysis.ipynb)** — reproducible technical notebook. Runs end-to-end from `synthetic_data/`.
 
 ## Setup
 
@@ -49,7 +50,7 @@ Every script is self-contained and reads directly from `synthetic_data/`.
 .venv/bin/python scripts/task2_tam/02_top_down_funnel.py
 ```
 
-The script runs the Monte Carlo, saves three CSVs and one PNG to `outputs/task2_tam/`, and then runs 17 hard-coded sanity checks against the rounded-k values in `docs/CASE_STUDY.md`. Any drift between code and doc fails the script with an `AssertionError`.
+The script runs the Monte Carlo, saves three CSVs and one PNG to `outputs/task2_tam/`, and then runs 17 hard-coded sanity checks against the rounded-k values in `docs/TASK_1_2_CASE_STUDY.md`. Any drift between code and doc fails the script with an `AssertionError`.
 
 **Tests.**
 
@@ -69,6 +70,6 @@ Prerequisites:
 - `pandoc ≥ 3.0` — `brew install pandoc`
 - Google Chrome at the default macOS install path (`/Applications/Google Chrome.app`)
 
-Output: `docs/CASE_STUDY.pdf`. Two CSS quirks are load-bearing (documented inline in [scripts/build_pdf.sh](scripts/build_pdf.sh)).
+Output: `docs/TASK_1_2_CASE_STUDY.pdf`. Two CSS quirks are load-bearing (documented inline in [scripts/build_pdf.sh](scripts/build_pdf.sh)).
 
-Results and methodology are documented in the case study — see [docs/CASE_STUDY.pdf](docs/CASE_STUDY.pdf).
+Results and methodology are documented in the deliverables listed above.

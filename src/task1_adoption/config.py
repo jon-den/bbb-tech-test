@@ -110,7 +110,7 @@ END_MONTH = "2023-12"
 # CLINICAL  — 7 features chosen a priori on clinical grounds; used as the
 #             reference baseline model.
 # CANDIDATE — 14 mechanistically defensible features that survive a pre-filter
-#             (see docs/CASE_STUDY.md, "Feature selection"). Rare label-derived
+#             (see docs/TASK_1_2_CASE_STUDY.md, "Feature selection"). Rare label-derived
 #             composites are dropped from the expanded pool:
 #             cyp_inhibitor_active, diso_ccb_combo_current, dual_bb_ccb_current
 #             — <1% prevalence, prone to spurious perfect selection at n=91 events.

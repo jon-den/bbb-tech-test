@@ -79,19 +79,19 @@ Always use the project virtual environment at `.venv/`.
 
 ## Building the case study PDF
 
-**Always regenerate `docs/CASE_STUDY.pdf` via `scripts/build_pdf.sh`.** Do not use VSCode's Markdown PDF export, Chrome's print-to-PDF from the raw `.md` preview, or vanilla `pandoc` — they produce a sans-serif, wide-margin layout that does not match the reviewer-facing format. Every rebuild uses the same pinned CSS in `build_pdf.sh` (Georgia serif, 820px max-width, 9.5pt body, dense abbreviations block).
+**Always regenerate `docs/TASK_1_2_CASE_STUDY.pdf` via `scripts/build_pdf.sh`.** Do not use VSCode's Markdown PDF export, Chrome's print-to-PDF from the raw `.md` preview, or vanilla `pandoc` — they produce a sans-serif, wide-margin layout that does not match the reviewer-facing format. Every rebuild uses the same pinned CSS in `build_pdf.sh` (Georgia serif, 820px max-width, 9.5pt body, dense abbreviations block).
 
 ```bash
 scripts/build_pdf.sh
 ```
 
-Prerequisites: `pandoc ≥ 3.0` (`brew install pandoc`), Google Chrome at the macOS default path. Output should be `docs/CASE_STUDY.pdf` at ~800–900 KB. If it comes out at ~500 KB with sans-serif type or wide margins, the wrong tool was used — rebuild via `scripts/build_pdf.sh`.
+Prerequisites: `pandoc ≥ 3.0` (`brew install pandoc`), Google Chrome at the macOS default path. Output should be `docs/TASK_1_2_CASE_STUDY.pdf` at ~800–900 KB. If it comes out at ~500 KB with sans-serif type or wide margins, the wrong tool was used — rebuild via `scripts/build_pdf.sh`.
 
 Two load-bearing quirks in the script (documented inline in [scripts/build_pdf.sh](scripts/build_pdf.sh)):
 1. The tempfile suffix **must** end in `.html` — Chrome refuses to parse `<style>` in files with unknown extensions.
 2. The CSS is a **single line** injected via pandoc's `header-includes` variable — multi-line breaks placement and the `<style>` block leaks into page 1.
 
-If the format needs to change, edit the CSS string in `scripts/build_pdf.sh` (do not add a separate stylesheet). Rebuild after every edit to `docs/CASE_STUDY.md`.
+If the format needs to change, edit the CSS string in `scripts/build_pdf.sh` (do not add a separate stylesheet). Rebuild after every edit to `docs/TASK_1_2_CASE_STUDY.md`.
 
 ---
 

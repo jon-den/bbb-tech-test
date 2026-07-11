@@ -119,7 +119,7 @@ def main():
 
     # ── 3. Stability selection on candidate pool ────────────────────
     #
-    # Two-stage selection (see docs/CASE_STUDY.md → "Feature selection"):
+    # Two-stage selection (see docs/TASK_1_2_CASE_STUDY.md → "Feature selection"):
     #   1. Pre-filter: 36 raw candidates → CANDIDATE_FEATURES (14) by
     #      dropping rolling-window near-duplicates and rare label-derived
     #      composites (<1% prevalence) that game stability selection at n=91
