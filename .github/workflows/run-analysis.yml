@@ -1,0 +1,47 @@
+name: Run Analysis Pipeline
+
+on:
+  push:
+    branches: [submission/jonas-denck]
+  workflow_dispatch:
+
+jobs:
+  analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Unzip synthetic data
+        run: unzip -o synthetic_data.zip -d synthetic_data/
+
+      - name: Run Task 1 — Adoption modelling
+        run: |
+          source .venv/bin/activate
+          python scripts/task1_adoption/01_adoption_model.py
+          python scripts/task1_adoption/02_sensitivity.py
+          python scripts/task1_adoption/03_adoption_figure.py
+          python scripts/task1_adoption/04_calibration.py
+          python scripts/task1_adoption/05_hr_forest_plot.py
+          python scripts/task1_adoption/consolidate_outputs.py
+
+      - name: Run Task 2 — TAM estimation
+        run: |
+          source .venv/bin/activate
+          python scripts/task2_tam/02_top_down_funnel.py
+
+      - name: Upload outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: analysis-outputs
+          path: outputs/
