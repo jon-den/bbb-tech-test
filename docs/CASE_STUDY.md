@@ -27,7 +27,7 @@ link-citations: true
 
 ### The data
 
-Synthetic US commercial claims on ~30k cardiac patients (2020–2023) that contain 166 unique Camzyos (mavacamten) patients. The Camzyos FDA label [@fda_camzyos_label] defines the indication as symptomatic NYHA class II-III oHCM; the primary oHCM ICD-10 code, I42.1, is present for  90.4% (150/166) of the patients. The remaining patients have at least an adjacent code (I42.2, I42.9) present and are included as well. Symptoms are typically only insufficiently coded in claims data and NYHA class are not available in billing data. Therefore, NYHA class II-III cannot be reliably determined to identify symptomatic NYHA class II-III oHCM reliably. 
+Synthetic US commercial claims on ~30k cardiac patients (2020–2023) that contain 166 unique Camzyos (mavacamten) patients. The Camzyos FDA label [@fda_camzyos_label] defines the indication as symptomatic NYHA class II-III oHCM; the primary oHCM ICD-10 code, I42.1, is present for 90.4% (150/166) of the patients. The remaining patients have at least an adjacent code (I42.2, I42.9) present and are included as well. Symptoms are typically only insufficiently coded in claims data and NYHA class are not available in billing data. Therefore, NYHA class II-III cannot be reliably determined to identify symptomatic NYHA class II-III oHCM reliably. 
 
 98.8% of Camzyos initiators in this dataset have been prescribed Disopyramide before. The remaining ~1% without a recorded Disopyramide prescription could reflect coding inconsistencies, missing claim records, or left censoring: these patients may have received Disopyramide before entering the observation window or under a different insurer. Based on this, the analysis is limited to patients with Disopyramide experience (775 patients, 146 Camzyos initiators over 21 months post-launch) and all Camzyos patients. All Disopyramide patients have at least one of I42.1, I42.2, or I42.9, and mirror the diagnosis inclusion criteria for the Camzyos patients. Camzyos is the next-line therapy after Disopyramide failure in clinical guidelines, but this conditioning on Disopyramide could be a selection bias in our current dataset as the label does not require a Disopyramide prescription before Camzyos.
 
@@ -68,13 +68,13 @@ The clinical severity variables that are relevant for prescribing decisions (LVO
 
 Selection runs in two stages, a frequency filter and stability selection. Due to the small sample size, the choices for robust feature selections are restricted and the goal is to find few, but predictive features.
 
-**Stage 1 — pre-filter (25 → 14 candidates).** Rare features are dropped. Feature such as `cyp_inhibitor_active`, `diso_ccb_combo_current`, and `dual_bb_ccb_current` all have <1% person-month prevalence.
+**Stage 1 — pre-filter (25 → 14 candidates).** Rare features are dropped. Features such as `cyp_inhibitor_active`, `diso_ccb_combo_current`, and `dual_bb_ccb_current` all have <1% person-month prevalence.
 
 The 14-feature candidate pool includes demographics, comorbidity flags, all beta-blocker/CCB history features, Disopyramide adherence (MPR), months since first Disopyramide fill, months since last HCM med change, prior MRI, and 12-month rolling counts of echocardiograms, symptom diagnoses, and cardiac workup procedures.
 
-**Stage 2 — stability selection [@meinshausen2010] on the 14 candidates.** Preferred over standard stepwise or LASSO because it controls false-discovery risk while being robust to the choice of regularisation strength:
+**Stage 2 — stability selection [@meinshausen2010] on the 14 candidates.** Preferred over standard stepwise or LASSO because it improves selection robustness:
 
-- **200 bootstrap resamples**, each drawing 70% of *patients* to prevent leakage across person-months of the same individual.
+- **200 bootstrap resamples**, each drawing 70% of patients to prevent leakage across person-months of the same individual.
 - **L1-penalised logistic regression** on each subsample. The regularisation strength *C* is tuned once, on the full training set, via **patient-level `GroupKFold` cross-validation**.
 - Features are kept if their coefficient is non-zero in ≥60% of resamples. The selection probability threshold ($\pi_{thr}$) typically lies in the range $$\pi_{thr} \in (0.6, 0.9)$$ [@meinshausen2010].
 
@@ -178,7 +178,7 @@ Each fraction is uncertain and published sources disagree. The following procedu
 2. Fit a **triangular distribution** with `min` = lowest defensible value, `mode` = central/most-cited value, `max` = highest defensible value. **Wider disagreement between sources → wider triangle.**
 3. Draw 10,000 Monte Carlo samples, multiply through the funnel, report the resulting TAM distribution.
 
-Triangular distributions are the standard choice when only min/mode/max are known with no distributional assumptions beyond "values near the mode are more likely than values at the extremes."
+Triangular distributions are the standard choice when only min/mode/max are known.
 
 ### Data, assumptions, and parameters
 
@@ -228,7 +228,7 @@ MC median **~127k patients**, 80% CI **~84k – 195k**. The distribution is righ
 
 :::
 
-**Note** This is a projection of the eligible pool, not a Camzyos-on-drug forecast. The latter is a diffusion question (peak penetration, ramp shape,  label extension) and needs more data.
+**Note** This is a projection of the eligible pool, not a Camzyos-on-drug forecast. The latter is a diffusion question (peak penetration, ramp shape, label extension) and needs more data.
 
 ---
 
@@ -242,6 +242,7 @@ MC median **~127k patients**, 80% CI **~84k – 195k**. The distribution is righ
 - **Data selection is opaque.** The DATA_README says "US commercial claims" but leaves the selection criteria unspecified, whether Medicare/Medicaid is included is unknown and hence its generalisability as well.
 
 **Task 2**
+
 - **Prevalence triangle spans international + temporal sources.** The 2026 prevalence range (70–200/100k) combines [@husser2018] (Germany 2015), [@butzner2021] (US 2019), and [@massera2023] (imaging ceiling). No US-2026 point-prevalence measurement exists; the triangle captures this via width. Future projection (2026→2030) uses growth scenarios 2–7.4%/yr, bracketed by [@butzner2026] (measured incidence trend) and [@butzner2021] (ICD-10-era historical rate).
 - **Adult-only, current-label denominator.** SCOUT-HCM (adolescents 12 to <18) is a live label-expansion catalyst adding patients outside this denominator. Non-obstructive HCM is closed: trial ODYSSEY-HCM missed both co-primary endpoints in April 2025.
 - **Independence assumption.** Prevalence and eligibility are drawn independently; Camzyos-driven awareness may couple them, likely making the CI slightly too tight.
@@ -250,18 +251,17 @@ MC median **~127k patients**, 80% CI **~84k – 195k**. The distribution is righ
 
 **Task 1 — more data, more modelling:**
 
-- **Replace synthetic data with full claims data, such as MarketScan.** Collapses the 98.8% Disopyramide artefact, gives 500–2,000 Camzyos initiators (10× current sample), enables subgroup/sensitvity analyses.
+- **Replace synthetic data with full claims data, such as MarketScan.** Collapses the 98.8% Disopyramide artefact, gives 500–2,000 Camzyos initiators (10× current sample), enables subgroup/sensitivity analyses.
 - **Broader feature engineering.** With a larger sample, interaction terms (e.g., `ccb_ever × mri_ever`), time-varying coefficients, richer comorbidity features, and provider-level variables could be explored. With EHR-linked data, clinical/laboratory derived features could be derived. At n=91 events, each additional feature degrades calibration.
 - **Alternative feature selection methods.** Compare stability selection against recursive feature elimination (RFE), Boruta, or permutation importance to assess whether the 4-feature set is robust to the selection method, not just the data resampling.
-- **Hyperparameter tuning and model comparison.** With more events, nested temporal CV (expanding-window) becomes feasible for systematic hyperparameter search. Nonlinear models — discrete-time survival forests, gradient-boosted Cox — could then be benchmarked. Cleaner configuration and experiment management with Hydra and Weights & Biases.
-- **Richer diffusion model for the S-curve.** The cumulative-uptake trajectory is currently fitted with a simple 2-parameter logistic. With more post-launch data, richer diffusion models — e.g., Bass 1969, which separately parameterises coefficients of innovation and imitation — could better capture launch dynamics and give a more defensible extrapolation of the deceleration phase.
+- **Hyperparameter tuning and model comparison.** With more events, nested temporal CV (expanding-window) becomes feasible for systematic hyperparameter search. Nonlinear models could then be better benchmarked. 
+- **Richer diffusion model for the S-curve.** The cumulative-uptake trajectory is currently fitted with a simple 2-parameter logistic. With more post-launch data, richer models could better capture launch dynamics and give a more defensible extrapolation of the deceleration phase.
 
 **Task 2 — deepen the top-down funnel:**
 
 - **Refresh the prevalence input with a direct US-2026 read.** A pull from IQVIA/Symphony/Komodo against a 30M-life denominator would give a single-source 2026 US point-prevalence anchor, collapsing the ~58% of TAM variance from this parameter (currently driven by the international/temporal source span).
-- **Tighten the NYHA II-III symptomatic share.** The current triangle spans 45–92% (claims-based Butzner 2026 floor to registry-based Charron 2026 ceiling). A US chart review of 200–300 I42.1-coded patients for NYHA class and LVOT gradient would collapse this ~42% of TAM variance to a data-anchored point estimate.
-- **Age-stratify prevalence.** The current triangle doesn't stratify by age. Butzner 2026 Table 1 shows oHCM prevalence rises sharply with age (60/100k at 18–34 → 166/100k at ≥65). Splitting into <65 (commercial claims) and ≥65 (Medicare) sub-populations with separate inputs would give a more precise US 2026 estimate.
-- **Pin the "label-strict" adjustment via chart review.** The funnel captures diagnosed symptomatic oHCM, which is a ~15–25% overestimate of Camzyos-label-eligible (excludes LVEF <55%, active CYP-drug conflicts, and patients not yet on max-tolerated OMT). A chart-review subsample would produce a data-anchored label-strict multiplier.
+- **Tighten the NYHA II-III symptomatic share.** The current triangle spans 45–92% (claims-based Butzner 2026 floor to registry-based Charron 2026 ceiling). This variance/spread could be tightend by leveraging EHR data to determine the exact share.
+- **Pin the "label-strict" adjustment.** The funnel captures diagnosed symptomatic oHCM, which is an overestimate of Camzyos-label-eligible (excludes LVEF <55%, active CYP-drug conflicts, and patients not yet on max-tolerated OMT). EHR data could be used to resolve this overestimation.
 
 ---
 
