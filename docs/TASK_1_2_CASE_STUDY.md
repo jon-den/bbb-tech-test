@@ -239,13 +239,14 @@ MC median **~127k patients**, 80% CI **~84k – 195k**. The distribution is righ
 - **Synthetic data artefact.** The 98.8% Disopyramide→Camzyos co-occurrence seems very high; conversion rates and archetype hazards could shift with real data.
 - **Small sample size.** ~91 training events limit feature count. The nonlinear GBM benchmark did not improve discrimination, suggesting the linear model captures the available signal.
 - **Claims data only — no clinical detail.** LVOT gradient, NYHA class, echocardiographic findings, i.e., the variables that actually drive prescribing decisions, are absent from billing data. EHR linkage (IQVIA EHR Linked, TriNetX, Truveta) could unlock them.
-- **Data selection is opaque.** The DATA_README says "US commercial claims" but leaves the selection criteria unspecified, whether Medicare/Medicaid is included is unknown and hence its generalisability as well.
+- **Data selection criteria is unknown.** The DATA_README says "US commercial claims" but leaves the selection criteria unspecified, whether Medicare/Medicaid is included is unknown and hence its generalisability as well.
 
 **Task 2**
 
-- **Prevalence triangle spans international + temporal sources.** The 2026 prevalence range (70–200/100k) combines [@husser2018] (Germany 2015), [@butzner2021] (US 2019), and [@massera2023] (imaging ceiling). No US-2026 point-prevalence measurement exists; the triangle captures this via width. Future projection (2026→2030) uses growth scenarios 2–7.4%/yr, bracketed by [@butzner2026] (measured incidence trend) and [@butzner2021] (ICD-10-era historical rate).
-- **Adult-only, current-label denominator.** SCOUT-HCM (adolescents 12 to <18) is a live label-expansion catalyst adding patients outside this denominator. Non-obstructive HCM is closed: trial ODYSSEY-HCM missed both co-primary endpoints in April 2025.
-- **Independence assumption.** Prevalence and eligibility are drawn independently; Camzyos-driven awareness may couple them, likely making the CI slightly too tight.
+- **No single US prevalence source exists.** The 2026 prevalence range (70–200/100k) is stitched together from a German study [@husser2018], a US claims analysis [@butzner2021], and an imaging-based ceiling [@massera2023]. A direct, single-source US-2026 measurement would narrow this range considerably.
+- **Several assumptions use midpoint-of-range as the mode.** Where evidence gives only a plausible low and high (e.g., symptomatic share, diagnosis rate, annual growth), the distribution's mode is set to the midpoint. This is a simple default but means the central estimate could shift if better data pins the mode elsewhere.
+- **Adult-only, current-label scope.** The estimate covers the approved adult indication only. SCOUT-HCM (adolescents 12–17) is a live label-expansion catalyst that sits outside this denominator. Non-obstructive HCM is excluded: trial ODYSSEY-HCM missed both co-primary endpoints in April 2025.
+- **Funnel steps are assumed independent.** Prevalence and eligibility rates are drawn independently in the simulation; in practice, Camzyos-driven awareness campaigns may increase both diagnosis and treatment rates together, which would make the confidence interval slightly too narrow.
 
 ## What I would change with more time or data
 
