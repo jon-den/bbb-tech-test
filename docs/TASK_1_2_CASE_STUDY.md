@@ -11,7 +11,7 @@ link-citations: true
 
 > **Abbreviations used in this document**
 >
-> **AUC** — area under the ROC curve (discrimination metric) | **BB** — beta-blocker | **BSS** — Brier Skill Score (calibration metric) | **CCB** — calcium channel blocker (verapamil, diltiazem) | **CI** — confidence interval | **EHR** — electronic health record | **GLM** — generalised linear model | **HCM** — hypertrophic cardiomyopathy | **HR** — hazard ratio | **LVEF** — left ventricular ejection fraction | **MRI** — magnetic resonance imaging | **NYHA** — New York Heart Association functional class | **oHCM** — obstructive HCM | **PDUFA** — Prescription Drug User Fee Act (FDA review deadline) | **REMS** — Risk Evaluation and Mitigation Strategy (FDA-mandated distribution programme) | **TAM** — total addressable market
+> **AUC** — area under the ROC curve (discrimination metric) | **BB** — beta-blocker | **BSS** — Brier Skill Score (calibration metric) | **CCB** — calcium channel blocker (verapamil, diltiazem) | **CI** — confidence interval | **EHR** — electronic health record | **GLM** — generalised linear model | **HCM** — hypertrophic cardiomyopathy | **HR** — hazard ratio | **LVEF** — left ventricular ejection fraction | **MRI** — magnetic resonance imaging | **NYHA** — New York Heart Association functional class | **oHCM** — obstructive HCM | **PDUFA** — Prescription Drug User Fee Act (FDA review deadline) | **REMS** — Risk Evaluation and Mitigation Strategy (FDA-mandated distribution programme) | **TAM** — total addressable market | **WAC** — wholesale acquisition cost (manufacturer list price before rebates)
 
 ---
 
@@ -159,6 +159,8 @@ At the individual patient-month level, Camzyos initiation is rare (~1.5%) and ha
 
 ## Task 2 — How big is the US addressable market?
 
+TAM is often expressed in revenue (USD), but doing so requires either the WAC (the manufacturer's list price, publicly available) combined with assumptions about payer mix (commercial vs. Medicare/Medicaid reimbursement rates) to derive an estimated net price, or the actual net price after rebates and discounts — which manufacturers do not disclose. Because both paths introduce substantial uncertainty that is difficult to bound, this analysis reports TAM in **number of eligible patients**. Patient counts are directly estimable from epidemiological data and can be converted to revenue by multiplying by any price assumption the reader prefers.
+
 A top-down epidemiological funnel chains published fractions from the whole US adult population down to the Camzyos-eligible pool. Where two credible sources disagree on the same fraction, both bounds are used as the range of a triangular distribution rather than picking a winner. Monte Carlo simulation then propagates the joint uncertainty to a TAM distribution.
 
 **Why not reuse the Task 1 panel.** The dataset from Task 1 has ~30k cardiac patients whose selection criteria are unspecified. There is no sampling fraction, so no panel count can be scaled to a national level. A top-down funnel must anchor on numbers that carry a US denominator (Census, published US prevalence studies).
@@ -242,6 +244,7 @@ MC median **~127k patients**, 80% CI **~84k–195k**. The distribution is right-
 
 **Task 2**
 
+- **Patient counts, not revenue.** TAM is reported in eligible patients rather than USD. Converting to revenue requires a net price per patient, which depends on the WAC (list price), payer mix, and confidential rebate/discount terms. The WAC for Camzyos is public (~$115k/year), but the net price after rebates can be 30–60% lower and varies by channel; hardcoding a single net-price assumption would add a false sense of precision. Patient counts are the transparent, auditable layer; the reader can apply any price assumption.
 - **No single US prevalence source exists.** The 2026 prevalence range (70–200/100k) is stitched together from a German study [@husser2018], a US claims analysis [@butzner2021], and an imaging-based ceiling [@massera2023]. A direct, single-source US-2026 measurement would narrow this range considerably.
 - **Several assumptions use midpoint-of-range as the mode.** Where evidence gives only a plausible low and high (e.g., symptomatic share, diagnosis rate, annual growth), the distribution's mode is set to the midpoint. This is a simple default but means the central estimate could shift if better data pins the mode elsewhere.
 - **Adult-only, current-label scope.** The estimate covers the approved adult indication only. SCOUT-HCM (adolescents 12–17) is a live label-expansion catalyst that sits outside this denominator. Non-obstructive HCM is excluded: trial ODYSSEY-HCM missed both co-primary endpoints in April 2025.
