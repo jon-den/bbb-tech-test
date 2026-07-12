@@ -197,7 +197,7 @@ Triangular distributions are the standard choice when only min/mode/max are know
 
 :::
 
-**Growth scenarios.** `prev(year) = 80/100k × (1 + g)^(year − 2026)`, applied from the 2026 mode prevalence forward only. Two measured US-claims studies bracket the range; the mode is the midpoint of the two:
+**Growth scenarios.** `prev(year) = 80/100k × (1 + g)^(year − 2026)`, applied from the 2026 mode prevalence forward only. Two measured US-claims studies define the range and the mode is the midpoint of the two:
 
 ::: {.growth-scenarios}
 
@@ -211,13 +211,15 @@ Triangular distributions are the standard choice when only min/mode/max are know
 
 ### Results
 
-**Today (2026).**
+**Today (2026)**
 
 MC median **~127k patients**, 80% CI **~84k–195k**. The distribution is right-skewed because the prevalence max (200/100k) sits well above its mode (80/100k), which pulls the MC median above the deterministic mode-product (~94k, shown for reference as the blue dotted line).
 
 ![Figure: TAM Monte Carlo distribution](../outputs/task2_tam/02_top_down_tam_2026.png)
 
-**Outlook (2026 → 2030).** Anchored at the MC median (127k), three growth scenarios from 2026 forward:
+**Outlook (2026 → 2030)** 
+
+Anchored at the MC median (127k), three growth scenarios from 2026 forward:
 
 ::: {.outlook-table}
 
@@ -244,7 +246,7 @@ MC median **~127k patients**, 80% CI **~84k–195k**. The distribution is right-
 
 **Task 2**
 
-- **Patient counts, not revenue.** TAM is reported in eligible patients rather than USD. Converting to revenue requires a net price per patient, which depends on the WAC (list price), payer mix, and confidential rebate/discount terms. The WAC for Camzyos is public (~$115k/year), but the net price after rebates can be 30–60% lower and varies by channel; hardcoding a single net-price assumption would add a false sense of precision. Patient counts are the transparent, auditable layer; the reader can apply any price assumption.
+- **Patient counts, not revenue.** TAM is reported in eligible patients rather than USD. Converting to revenue requires a net price per patient, which depends on the WAC (list price), payer mix, and confidential rebate/discount terms. The WAC for Camzyos is public, but the net price after rebates can be significantly lower; BMS' revenue ÷ number of patients could be used to derive a net price per patient in future work.
 - **No single US prevalence source exists.** The 2026 prevalence range (70–200/100k) is stitched together from a German study [@husser2018], a US claims analysis [@butzner2021], and an imaging-based ceiling [@massera2023]. A direct, single-source US-2026 measurement would narrow this range considerably.
 - **Several assumptions use midpoint-of-range as the mode.** Where evidence gives only a plausible low and high (e.g., symptomatic share, diagnosis rate, annual growth), the distribution's mode is set to the midpoint. This is a simple default but means the central estimate could shift if better data pins the mode elsewhere.
 - **Adult-only, current-label scope.** The estimate covers the approved adult indication only. SCOUT-HCM (adolescents 12–17) is a live label-expansion catalyst that sits outside this denominator. Non-obstructive HCM is excluded: trial ODYSSEY-HCM missed both co-primary endpoints in April 2025.
