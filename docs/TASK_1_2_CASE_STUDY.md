@@ -265,7 +265,7 @@ Anchored at the MC median (127k), three growth scenarios from 2026 forward:
 **Task 2 — from patient counts to revenue:**
 
 - **Convert TAM from patients to USD.** Derive a net price per patient from BMS quarterly revenue filings divided by estimated patients on therapy (IQVIA/Symphony script data or BMS disclosures). This avoids reliance on the undisclosed gross-to-net discount.
-- **Verify funnel assumptions with RWD.** Use a large US claims database (e.g., MarketScan, IQVIA) to directly measure HCM prevalence, obstructive share, and symptomatic fraction rather than triangulating across international sources. EHR-linked data could additionally pin the label-strict eligibility criteria (LVEF ≥55%, no CYP conflicts, prior max-tolerated OMT) that the current funnel cannot capture.
+- **Verify funnel assumptions with RWD.** Use a large US claims database (e.g., MarketScan, IQVIA) to directly measure HCM prevalence, obstructive share, and symptomatic fraction rather than triangulating across international sources. EHR-linked data could additionally pin the label-strict eligibility criteria (e.g., prior max-tolerated therapy) that the current funnel cannot capture.
 
 ---
 
