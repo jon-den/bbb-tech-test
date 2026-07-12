@@ -262,11 +262,10 @@ Anchored at the MC median (127k), three growth scenarios from 2026 forward:
 - **Hyperparameter tuning and model comparison.** With more events, nested temporal CV (expanding-window) becomes feasible for systematic hyperparameter search. Nonlinear models could then be better benchmarked.
 - **Richer diffusion model for the S-curve.** The cumulative-uptake trajectory is currently fitted with a simple 2-parameter logistic. With more post-launch data, richer models could better capture launch dynamics and give a more defensible extrapolation of the deceleration phase.
 
-**Task 2 — deepen the top-down funnel:**
+**Task 2 — from patient counts to revenue:**
 
-- **Refresh the prevalence input with a direct US-2026 read.** A pull from IQVIA/Symphony/Komodo against a 30M-life denominator would give a single-source 2026 US point-prevalence anchor, collapsing the ~58% of TAM variance from this parameter (currently driven by the international/temporal source span).
-- **Tighten the NYHA II-III symptomatic share.** The current triangle spans 45–92% (claims-based Butzner 2026 floor to registry-based Charron 2026 ceiling). This variance/spread could be tightened by leveraging EHR data to determine the exact share.
-- **Pin the "label-strict" adjustment.** The funnel captures diagnosed symptomatic oHCM, which is an overestimate of Camzyos-label-eligible (excludes LVEF <55%, active CYP-drug conflicts, and patients not yet on max-tolerated OMT). EHR data could be used to resolve this overestimation.
+- **Convert TAM from patients to USD.** Derive a net price per patient from BMS quarterly revenue filings divided by estimated patients on therapy (IQVIA/Symphony script data or BMS disclosures). This avoids reliance on the undisclosed gross-to-net discount.
+- **Verify funnel assumptions with RWD.** Use a large US claims database (e.g., MarketScan, IQVIA) to directly measure HCM prevalence, obstructive share, and symptomatic fraction rather than triangulating across international sources. EHR-linked data could additionally pin the label-strict eligibility criteria (LVEF ≥55%, no CYP conflicts, prior max-tolerated OMT) that the current funnel cannot capture.
 
 ---
 
