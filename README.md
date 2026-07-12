@@ -33,21 +33,16 @@ unzip -o synthetic_data.zip
 
 Every script is self-contained and reads directly from `synthetic_data/`.
 
-**Task 1 — adoption model.** Scripts are numbered in the order they should be run.
+**Task 1 — adoption model.** Single script runs the full pipeline: model comparison, adoption figure, calibration, and forest plot.
 
 ```bash
-.venv/bin/python scripts/task1_adoption/01_adoption_model.py     # main pipeline + benchmarks
-.venv/bin/python scripts/task1_adoption/02_sensitivity.py        # robustness across cohort / censoring / features
-.venv/bin/python scripts/task1_adoption/03_adoption_figure.py    # four-panel adoption figure (case study)
-.venv/bin/python scripts/task1_adoption/04_calibration.py        # reliability + subgroup calibration
-.venv/bin/python scripts/task1_adoption/05_hr_forest_plot.py     # hazard ratio forest plot (case study)
-.venv/bin/python scripts/task1_adoption/consolidate_outputs.py   # merge per-script CSVs/JSONs → task1_outputs.xlsx + task1_scalars.json
+.venv/bin/python scripts/task1_adoption/run_task1.py
 ```
 
 **Task 2 — top-down TAM funnel.** Single script; asserts every rounded-k value in the case study.
 
 ```bash
-.venv/bin/python scripts/task2_tam/02_top_down_funnel.py
+.venv/bin/python scripts/task2_tam/run_task2.py
 ```
 
 The script runs the Monte Carlo, saves three CSVs and one PNG to `outputs/task2_tam/`, and then runs 17 hard-coded sanity checks against the rounded-k values in `docs/TASK_1_2_CASE_STUDY.md`. Any drift between code and doc fails the script with an `AssertionError`.

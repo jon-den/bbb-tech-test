@@ -28,15 +28,12 @@ jobs:
       - name: Run Task 1 — Adoption modelling
         run: |
           source .venv/bin/activate
-          python scripts/task1_adoption/01_adoption_model.py
-          python scripts/task1_adoption/03_adoption_figure.py
-          python scripts/task1_adoption/04_calibration.py
-          python scripts/task1_adoption/05_hr_forest_plot.py
+          python scripts/task1_adoption/run_task1.py
 
       - name: Run Task 2 — TAM estimation
         run: |
           source .venv/bin/activate
-          python scripts/task2_tam/02_top_down_funnel.py
+          python scripts/task2_tam/run_task2.py
 
       - name: Upload outputs
         uses: actions/upload-artifact@v4

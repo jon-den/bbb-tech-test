@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from scipy import stats
 from sklearn.base import BaseEstimator
 from sklearn.metrics import brier_score_loss, roc_auc_score
 
@@ -333,3 +334,81 @@ def evaluate_model(
         "n_events": int(y_test.sum()),
     }
     return results, monthly
+
+
+# ── Statistical utilities ──────────────────────────────────────────────────
+
+
+def wilson_ci(
+    k: np.ndarray | int,
+    n: np.ndarray | int,
+    z: float = 1.96,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Wilson score confidence interval for binomial proportions."""
+    k, n = np.asarray(k, dtype=float), np.asarray(n, dtype=float)
+    p = k / n
+    denom = 1 + z**2 / n
+    centre = (p + z**2 / (2 * n)) / denom
+    half = z * np.sqrt(p * (1 - p) / n + z**2 / (4 * n**2)) / denom
+    return np.maximum(0, centre - half), np.minimum(1, centre + half)
+
+
+def hosmer_lemeshow(
+    observed: np.ndarray,
+    expected: np.ndarray,
+    n: np.ndarray,
+    n_bins: int | None = None,
+) -> dict[str, float]:
+    """Hosmer-Lemeshow goodness-of-fit test.
+
+    Args:
+        observed: Observed event counts per bin.
+        expected: Expected event counts per bin (n * mean_pred).
+        n: Sample size per bin.
+        n_bins: Number of bins (for dof calculation). Defaults to len(observed).
+
+    Returns:
+        Dict with chi2, dof, and p_value.
+    """
+    observed, expected, n = (
+        np.asarray(observed, dtype=float),
+        np.asarray(expected, dtype=float),
+        np.asarray(n, dtype=float),
+    )
+    if n_bins is None:
+        n_bins = len(observed)
+    chi2 = float(((observed - expected) ** 2 / (expected * (1 - expected / n))).sum())
+    dof = n_bins - 2
+    p_value = float(1 - stats.chi2.cdf(chi2, df=dof))
+    return {"chi2": chi2, "dof": dof, "p_value": p_value}
+
+
+def subgroup_cal(
+    df: pd.DataFrame,
+    feature_col: str,
+    label_0: str,
+    label_1: str,
+    pred_col: str = "pred",
+    event_col: str = "event",
+) -> pd.DataFrame:
+    """Observed vs predicted event rates for a binary subgroup split."""
+    rows = []
+    for val, label in [(0, label_0), (1, label_1)]:
+        sub = df[df[feature_col] == val]
+        n_sub = len(sub)
+        obs = int(sub[event_col].sum())
+        pred = float(sub[pred_col].sum())
+        lo, hi = wilson_ci(np.array([obs]), np.array([n_sub]))
+        rows.append(
+            {
+                "label": label,
+                "obs_rate": obs / n_sub,
+                "pred_rate": pred / n_sub,
+                "obs": obs,
+                "pred": pred,
+                "n": n_sub,
+                "ci_lo": lo[0],
+                "ci_hi": hi[0],
+            }
+        )
+    return pd.DataFrame(rows)
