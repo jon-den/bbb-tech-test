@@ -23,7 +23,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Unzip synthetic data
-        run: unzip -o synthetic_data.zip -d synthetic_data/
+        run: unzip -o synthetic_data.zip
 
       - name: Run Task 1 — Adoption modelling
         run: |
