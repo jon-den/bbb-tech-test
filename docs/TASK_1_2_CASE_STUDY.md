@@ -11,7 +11,7 @@ link-citations: true
 
 > **Abbreviations used in this document**
 >
-> **AUC** — area under the ROC curve (discrimination metric) | **BB** — beta-blocker | **BSS** — Brier Skill Score (calibration metric) | **CCB** — calcium channel blocker (verapamil, diltiazem) | **CI** — confidence interval | **EHR** — electronic health record | **GLM** — generalised linear model | **HCM** — hypertrophic cardiomyopathy | **HR** — hazard ratio | **LVEF** — left ventricular ejection fraction | **MRI** — magnetic resonance imaging | **NYHA** — New York Heart Association functional class | **oHCM** — obstructive HCM | **PDUFA** — Prescription Drug User Fee Act (FDA review deadline) | **REMS** — Risk Evaluation and Mitigation Strategy (FDA-mandated distribution programme) | **TAM** — total addressable market 
+> **AUC** — area under the ROC curve (discrimination metric) | **BB** — beta-blocker | **BSS** — Brier Skill Score (calibration metric) | **CCB** — calcium channel blocker (verapamil, diltiazem) | **CI** — confidence interval | **EHR** — electronic health record | **GLM** — generalised linear model | **HCM** — hypertrophic cardiomyopathy | **HR** — hazard ratio | **LVEF** — left ventricular ejection fraction | **MRI** — magnetic resonance imaging | **NYHA** — New York Heart Association functional class | **oHCM** — obstructive HCM | **PDUFA** — Prescription Drug User Fee Act (FDA review deadline) | **REMS** — Risk Evaluation and Mitigation Strategy (FDA-mandated distribution programme) | **TAM** — total addressable market
 
 ---
 
@@ -19,7 +19,7 @@ link-citations: true
 
 **Task 1.** Treatment escalation history is the strongest predictor of Camzyos initiation in claims data (AUC 0.72). The dominant signal is whether a patient has *already tried and moved past* first-line therapy (ccb_ever HR 5.40, p < 0.001; 4-feature model), not age, sex, or symptom-burden billing codes. However, it cannot be ruled out that clinical severity (LVOT gradient, NYHA class), invisible in billing data, is the true underlying driver.
 
-**Task 2.** **~127k US patients** are Camzyos-addressable today (80% CI **84k–195k**), plausibly reaching **~137k–169k by 2030** across growth scenarios (base case ~152k). A transparent top-down epidemiological funnel: `TAM = US adults × diagnosed HCM prevalence × Camzyos-eligible fraction`, each factor a triangular distribution over published bounds with Monte Carlo propagation. 
+**Task 2.** **~127k US patients** are Camzyos-addressable today (80% CI **84k–195k**), plausibly reaching **~137k–169k by 2030** across growth scenarios (base case ~152k). A transparent top-down epidemiological funnel: `TAM = US adults × diagnosed HCM prevalence × Camzyos-eligible fraction`, each factor a triangular distribution over published bounds with Monte Carlo propagation.
 
 ---
 
@@ -27,7 +27,7 @@ link-citations: true
 
 ### The data
 
-Synthetic US commercial claims on ~30k cardiac patients (2020–2023) that contain 166 unique Camzyos (mavacamten) patients. The Camzyos FDA label [@fda_camzyos_label] defines the indication as symptomatic NYHA class II-III oHCM; the primary oHCM ICD-10 code, I42.1, is present for 90.4% (150/166) of the patients. The remaining patients have at least an adjacent code (I42.2, I42.9) present and are included as well. Symptoms are typically only insufficiently coded in claims data and NYHA class are not available in billing data. Therefore, NYHA class II-III cannot be reliably determined to identify symptomatic NYHA class II-III oHCM reliably. 
+Synthetic US commercial claims on ~30k cardiac patients (2020–2023) that contain 166 unique Camzyos (mavacamten) patients. The Camzyos FDA label [@fda_camzyos_label] defines the indication as symptomatic NYHA class II-III oHCM; the primary oHCM ICD-10 code, I42.1, is present for 90.4% (150/166) of the patients. The remaining patients have at least an adjacent code (I42.2, I42.9) present and are included as well. Symptoms are only partially captured in claims data, and NYHA class is not available in billing data. Therefore, symptomatic NYHA class II-III oHCM cannot be reliably identified from claims alone.
 
 98.8% of Camzyos initiators in this dataset have been prescribed Disopyramide before. The remaining ~1% without a recorded Disopyramide prescription could reflect coding inconsistencies, missing claim records, or left censoring: these patients may have received Disopyramide before entering the observation window or under a different insurer. Based on this, the analysis is limited to patients with Disopyramide experience (775 patients, 146 Camzyos initiators over 21 months post-launch) and all Camzyos patients. All Disopyramide patients have at least one of I42.1, I42.2, or I42.9, and mirror the diagnosis inclusion criteria for the Camzyos patients. Camzyos is the next-line therapy after Disopyramide failure in clinical guidelines, but this conditioning on Disopyramide could be a selection bias in our current dataset as the label does not require a Disopyramide prescription before Camzyos.
 
@@ -110,7 +110,6 @@ The final model contains the set of features passing the 0.60 threshold: **`ccb_
 The forest plot shows the HR and 95% CI for each of the four refined features. An HR > 1 means the feature increases the monthly probability of Camzyos initiation; HR < 1 means it decreases it. The reference line at HR = 1 represents no effect.
 
 Two of the four features are statistically significant at the 5% level: `ccb_ever` (HR 5.40, 95% CI 2.64–11.06, p < 0.001) — having ever tried a calcium channel blocker signals deeper treatment escalation and is the single strongest predictor. `ccb_current` (HR 0.20, 95% CI 0.07–0.54, p = 0.002) — being actively on a CCB suppresses switching in the current month. `bb_current` (HR 0.15, 95% CI 0.02–1.09, p = 0.061) has the expected protective direction but is borderline significant with a wide CI, consistent with the small number of person-months where a patient is actively on a beta-blocker within the 30-day coverage window. `months_since_diso` (HR 0.99 per month, p = 0.53) is not individually significant at the 5% level. This feature could be removed in future versions.
-
 
 The patient profile/archetype that has ever tried a CCB and is currently off both beta-blockers and CCBs has the highest monthly initiation hazard compared to an unescalated patient still actively on a beta-blocker.
 
@@ -212,7 +211,7 @@ Triangular distributions are the standard choice when only min/mode/max are know
 
 **Today (2026).**
 
-MC median **~127k patients**, 80% CI **~84k – 195k**. The distribution is right-skewed because the prevalence max (200/100k) sits well above its mode (80/100k), which pulls the MC median above the deterministic mode-product (~94k, shown for reference as the blue dotted line).
+MC median **~127k patients**, 80% CI **~84k–195k**. The distribution is right-skewed because the prevalence max (200/100k) sits well above its mode (80/100k), which pulls the MC median above the deterministic mode-product (~94k, shown for reference as the blue dotted line).
 
 ![Figure: TAM Monte Carlo distribution](../outputs/task2_tam/02_top_down_tam_2026.png)
 
@@ -228,7 +227,7 @@ MC median **~127k patients**, 80% CI **~84k – 195k**. The distribution is righ
 
 :::
 
-**Note** This is a projection of the eligible pool, not a Camzyos-on-drug forecast. The latter is a diffusion question (peak penetration, ramp shape, label extension) and needs more data.
+**Note.** This is a projection of the eligible pool, not a Camzyos-on-drug forecast. The latter is a diffusion question (peak penetration, ramp shape, label extension) and needs more data.
 
 ---
 
@@ -239,7 +238,7 @@ MC median **~127k patients**, 80% CI **~84k – 195k**. The distribution is righ
 - **Synthetic data artefact.** The 98.8% Disopyramide→Camzyos co-occurrence seems very high; conversion rates and archetype hazards could shift with real data.
 - **Small sample size.** ~91 training events limit feature count. The nonlinear GBM benchmark did not improve discrimination, suggesting the linear model captures the available signal.
 - **Claims data only — no clinical detail.** LVOT gradient, NYHA class, echocardiographic findings, i.e., the variables that actually drive prescribing decisions, are absent from billing data. EHR linkage (IQVIA EHR Linked, TriNetX, Truveta) could unlock them.
-- **Data selection criteria is unknown.** The DATA_README says "US commercial claims" but leaves the selection criteria unspecified, whether Medicare/Medicaid is included is unknown and hence its generalisability as well.
+- **Data selection criteria are unknown.** The DATA_README says "US commercial claims" but leaves the selection criteria unspecified. Whether Medicare/Medicaid is included is unknown, and hence its generalisability cannot be assessed.
 
 **Task 2**
 
@@ -255,13 +254,13 @@ MC median **~127k patients**, 80% CI **~84k – 195k**. The distribution is righ
 - **Replace synthetic data with full claims data, such as MarketScan.** Collapses the 98.8% Disopyramide artefact, gives 500–2,000 Camzyos initiators (10× current sample), enables subgroup/sensitivity analyses.
 - **Broader feature engineering.** With a larger sample, interaction terms (e.g., `ccb_ever × mri_ever`), time-varying coefficients, richer comorbidity features, and provider-level variables could be explored. With EHR-linked data, clinical/laboratory derived features could be derived. At n=91 events, each additional feature degrades calibration.
 - **Alternative feature selection methods.** Compare stability selection against recursive feature elimination (RFE), Boruta, or permutation importance to assess whether the 4-feature set is robust to the selection method, not just the data resampling.
-- **Hyperparameter tuning and model comparison.** With more events, nested temporal CV (expanding-window) becomes feasible for systematic hyperparameter search. Nonlinear models could then be better benchmarked. 
+- **Hyperparameter tuning and model comparison.** With more events, nested temporal CV (expanding-window) becomes feasible for systematic hyperparameter search. Nonlinear models could then be better benchmarked.
 - **Richer diffusion model for the S-curve.** The cumulative-uptake trajectory is currently fitted with a simple 2-parameter logistic. With more post-launch data, richer models could better capture launch dynamics and give a more defensible extrapolation of the deceleration phase.
 
 **Task 2 — deepen the top-down funnel:**
 
 - **Refresh the prevalence input with a direct US-2026 read.** A pull from IQVIA/Symphony/Komodo against a 30M-life denominator would give a single-source 2026 US point-prevalence anchor, collapsing the ~58% of TAM variance from this parameter (currently driven by the international/temporal source span).
-- **Tighten the NYHA II-III symptomatic share.** The current triangle spans 45–92% (claims-based Butzner 2026 floor to registry-based Charron 2026 ceiling). This variance/spread could be tightend by leveraging EHR data to determine the exact share.
+- **Tighten the NYHA II-III symptomatic share.** The current triangle spans 45–92% (claims-based Butzner 2026 floor to registry-based Charron 2026 ceiling). This variance/spread could be tightened by leveraging EHR data to determine the exact share.
 - **Pin the "label-strict" adjustment.** The funnel captures diagnosed symptomatic oHCM, which is an overestimate of Camzyos-label-eligible (excludes LVEF <55%, active CYP-drug conflicts, and patients not yet on max-tolerated OMT). EHR data could be used to resolve this overestimation.
 
 ---
