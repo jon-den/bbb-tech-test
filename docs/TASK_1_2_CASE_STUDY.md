@@ -269,7 +269,7 @@ Anchored at the MC median (127k), three growth scenarios from 2026 forward:
 
 ---
 
-**Tools.** Coding and pipeline development: [Claude Code](https://claude.ai/code). Writing and document refinement: [Claude Desktop](https://claude.ai). Literature research and prior sourcing: [Elicit](https://elicit.com). All modelling decisions and analytical judgements are the author's.
+**Tools.** Coding and pipeline development: [Claude Code](https://claude.ai/code). Writing and document refinement: [Claude Desktop](https://claude.ai). Literature research: [Elicit](https://elicit.com). 
 
 ---
 
